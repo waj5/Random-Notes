@@ -7,12 +7,10 @@ from app.api.routes.block_media_relations import router as block_media_relations
 from app.api.routes.media_assets import router as media_assets_router
 from app.api.routes.note_blocks import router as note_blocks_router
 from app.api.routes.notes import router as notes_router
-from app.db.database import create_db_and_tables
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_db_and_tables()
     yield
 
 

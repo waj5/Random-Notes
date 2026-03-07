@@ -4,10 +4,13 @@ import hashlib
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-SECRET_KEY = "replace-this-with-a-long-random-string"
+from app.core.config import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
+    SECRET_KEY,
+)
+
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
