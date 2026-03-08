@@ -3,6 +3,7 @@ from sqlmodel import Session
 
 from app.api.deps import get_current_session_id, get_current_user, get_session
 from app.models.user import User
+from app.core.response import success_response
 from app.schemas.auth import (
     MessageResponse,
     RefreshTokenRequest,
@@ -10,7 +11,6 @@ from app.schemas.auth import (
     TokenResponse,
     UserDeleteResponse,
     UserLogin,
-    UserPublic,
     UserRegister,
 )
 from app.services.auth_services import (
@@ -26,15 +26,16 @@ from app.services.auth_services import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", response_model=UserPublic)
+@router.post("/register")
 def register_api(
     data: UserRegister,
     session: Session = Depends(get_session),
 ):
-    return register_user(session, data)
+    user = register_user(session, data)
+    return success_response(user, "User registered successfully")
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login")
 def login_api(
     request: Request,
     data: UserLogin,
@@ -42,7 +43,8 @@ def login_api(
 ):
     user_agent = request.headers.get("user-agent")
     ip_address = request.client.host if request.client else None
-    return login_user(session, data, user_agent=user_agent, ip_address=ip_address)
+    user_token = login_user(session, data, user_agent=user_agent, ip_address=ip_address)
+    return success_response(user_token, "User logged in successfully")
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -53,11 +55,12 @@ def refresh_api(
     return refresh_user_token(session, data.refresh_token)
 
 
-@router.get("/me", response_model=UserPublic)
+@router.get("/me")
 def me_api(
     current_user: User = Depends(get_current_user),
 ):
-    return current_user
+    user = current_user
+    return success_response(user)
 
 
 @router.get("/sessions", response_model=list[SessionPublic])
