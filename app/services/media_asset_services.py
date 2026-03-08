@@ -11,7 +11,9 @@ from app.core.config import (
     IMAGE_UPLOAD_URL_PREFIX,
     MAX_IMAGE_SIZE,
 )
+from app.models.block_media_relation import BlockMediaRelation
 from app.models.media_asset import MediaAsset
+from app.models.note import Note
 from app.models.user import User
 from app.schemas.media_asset import MediaAssetCreate
 
@@ -86,7 +88,8 @@ def upload_image_and_create_media_asset(
     session.commit()
     session.refresh(media)
     return media
-    
+
+
 def list_media_assets(session: Session, current_user: User):
     statement = (
         select(MediaAsset)
@@ -105,3 +108,40 @@ def get_media_asset(session: Session, current_user: User, media_id: int):
     if not media:
         raise HTTPException(status_code=404, detail="Media asset not found")
     return media
+
+
+def delete_media_asset(session: Session, current_user: User, media_id: int):
+    media = session.exec(
+        select(MediaAsset).where(
+            MediaAsset.id == media_id,
+            MediaAsset.user_id == current_user.id,
+        )
+    ).first()
+    if not media:
+        raise HTTPException(status_code=404, detail="Media asset not found")
+
+    relations = session.exec(
+        select(BlockMediaRelation).where(BlockMediaRelation.media_id == media_id)
+    ).all()
+    for relation in relations:
+        session.delete(relation)
+
+    notes = session.exec(
+        select(Note).where(
+            Note.user_id == current_user.id,
+            Note.cover_media_id == media_id,
+            Note.deleted_at.is_(None),
+        )
+    ).all()
+    for note in notes:
+        note.cover_media_id = None
+        session.add(note)
+
+    file_path = IMAGE_UPLOAD_DIR / media.file_url.split("/")[-1]
+    if file_path.exists() and file_path.is_file():
+        file_path.unlink()
+
+    session.delete(media)
+    session.commit()
+
+    return {"message": "Media asset deleted successfully"}
