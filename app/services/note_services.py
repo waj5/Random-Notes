@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session, func, or_, select
 
 from app.models.block_media_relation import BlockMediaRelation
 from app.models.media_asset import MediaAsset
@@ -27,12 +27,64 @@ def create_note(session: Session, current_user: User, data: NoteCreate):
     return note
 
 
-def list_notes(session: Session, current_user: User):
-    statement = select(Note).where(
+def list_notes(
+    session: Session,
+    current_user: User,
+    offset: int = 0,
+    limit: int = 10,
+    status: str | None = None,
+    keyword: str | None = None,
+    mood: str | None = None,
+    scene: str | None = None,
+):
+    filters = [
         Note.user_id == current_user.id,
         Note.deleted_at.is_(None),
-    )
-    return session.exec(statement).all()
+    ]
+
+    if status:
+        filters.append(Note.status == status)
+
+    if mood:
+        filters.append(Note.mood == mood)
+
+    if scene:
+        filters.append(Note.scene == scene)
+
+    if keyword:
+        keyword_value = f"%{keyword}%"
+
+        matching_note_ids_subquery = (
+            select(NoteBlock.note_id)
+            .where(NoteBlock.text_content.ilike(keyword_value))
+        )
+
+        filters.append(
+            or_(
+                Note.title.ilike(keyword_value),
+                Note.summary.ilike(keyword_value),
+                Note.id.in_(matching_note_ids_subquery),
+            )
+        )
+
+    total = session.exec(
+        select(func.count()).select_from(Note).where(*filters)
+    ).one()
+
+    items = session.exec(
+        select(Note)
+        .where(*filters)
+        .order_by(Note.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    return {
+        "items": items,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+    }
 
 
 def get_note(session: Session, current_user: User, note_id: int):
@@ -65,6 +117,34 @@ def delete_note(session: Session, current_user: User, note_id: int):
     note = get_note(session, current_user, note_id)
 
     note.deleted_at = datetime.utcnow()
+    note.updated_at = datetime.utcnow()
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    return note
+
+
+def publish_note(session: Session, current_user: User, note_id: int):
+    note = get_note(session, current_user, note_id)
+
+    blocks = session.exec(
+        select(NoteBlock).where(NoteBlock.note_id == note_id)
+    ).all()
+    if not blocks:
+        raise HTTPException(status_code=400, detail="Cannot publish an empty note")
+
+    note.status = "published"
+    note.updated_at = datetime.utcnow()
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    return note
+
+
+def unpublish_note(session: Session, current_user: User, note_id: int):
+    note = get_note(session, current_user, note_id)
+
+    note.status = "draft"
     note.updated_at = datetime.utcnow()
     session.add(note)
     session.commit()
@@ -136,7 +216,54 @@ def get_note_detail(session: Session, current_user: User, note_id: int):
         "book_theme": note.book_theme,
         "is_private": note.is_private,
         "status": note.status,
+        "cover_media_id": note.cover_media_id,
         "created_at": note.created_at,
         "updated_at": note.updated_at,
         "blocks": block_details,
     }
+
+def update_note_cover(
+    session: Session,
+    current_user: User,
+    note_id: int,
+    cover_media_id: int | None,
+):
+    note = get_note(session, current_user, note_id)
+
+    if cover_media_id is None:
+        note.cover_media_id = None
+        note.updated_at = datetime.utcnow()
+        session.add(note)
+        session.commit()
+        session.refresh(note)
+        return note
+
+    media = session.exec(
+        select(MediaAsset).where(
+            MediaAsset.id == cover_media_id,
+            MediaAsset.user_id == current_user.id,
+        )
+    ).first()
+    if not media:
+        raise HTTPException(status_code=404, detail="Media asset not found")
+
+    relation = session.exec(
+        select(BlockMediaRelation)
+        .join(NoteBlock, BlockMediaRelation.block_id == NoteBlock.id)
+        .where(
+            NoteBlock.note_id == note_id,
+            BlockMediaRelation.media_id == cover_media_id,
+        )
+    ).first()
+    if not relation:
+        raise HTTPException(
+            status_code=400,
+            detail="Cover media must belong to the note",
+        )
+
+    note.cover_media_id = cover_media_id
+    note.updated_at = datetime.utcnow()
+    session.add(note)
+    session.commit()
+    session.refresh(note)
+    return note
