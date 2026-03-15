@@ -19,6 +19,15 @@ IMAGE_UPLOAD_DIR = UPLOAD_DIR / "images"
 IMAGE_UPLOAD_URL_PREFIX = os.getenv("IMAGE_UPLOAD_URL_PREFIX", "/uploads/images").rstrip("/")
 MAX_IMAGE_SIZE = int(os.getenv("MAX_IMAGE_SIZE", str(5 * 1024 * 1024)))
 
+# Storage Configuration
+STORAGE_TYPE = os.getenv("STORAGE_TYPE", "local")  # "local" or "qiniu"
+
+# Qiniu Configuration
+QINIU_ACCESS_KEY = os.getenv("QINIU_ACCESS_KEY")
+QINIU_SECRET_KEY = os.getenv("QINIU_SECRET_KEY")
+QINIU_BUCKET_NAME = os.getenv("QINIU_BUCKET_NAME")
+QINIU_DOMAIN = os.getenv("QINIU_DOMAIN")
+
 ALLOWED_IMAGE_MIME_TYPES = {
     "image/jpeg": ".jpg",
     "image/png": ".png",

@@ -55,6 +55,30 @@ const isSaving = ref(false)
 
 const isPublishing = ref(false)
 
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0
+})
+
+const showContextMenu = (e: MouseEvent) => {
+  e.preventDefault()
+  contextMenu.value = {
+    visible: true,
+    x: e.clientX,
+    y: e.clientY
+  }
+}
+
+const hideContextMenu = () => {
+  contextMenu.value.visible = false
+}
+
+const addBlockAndHide = (type: LayoutType) => {
+  addBlock(type)
+  hideContextMenu()
+}
+
 const publishNote = async () => {
   if (!noteId.value) {
     alert('请先保存笔记再发布');
@@ -136,39 +160,7 @@ const saveNote = async () => {
       </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden">
-      <!-- Toolbar Sidebar -->
-      <aside class="w-20 bg-white/80 backdrop-blur border-r border-gray-100 flex flex-col items-center py-8 gap-6 z-40 hidden md:flex">
-        <button @click="addBlock('text-only')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors group relative" title="纯文字">
-          <Type :size="24" stroke-width="1.5" />
-          <span class="absolute left-16 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-lg">纯文字</span>
-        </button>
-        <button @click="addBlock('image-top')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors group relative" title="单图置顶">
-          <Image :size="24" stroke-width="1.5" />
-          <span class="absolute left-16 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-lg">单图置顶</span>
-        </button>
-        <button @click="addBlock('split-left')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors group relative" title="左图右文">
-          <Layout :size="24" stroke-width="1.5" />
-          <span class="absolute left-16 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-lg">左图右文</span>
-        </button>
-        <button @click="addBlock('split-right')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors group relative" title="右图左文">
-          <Layout :size="24" class="transform rotate-180" stroke-width="1.5" />
-          <span class="absolute left-16 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-lg">右图左文</span>
-        </button>
-        <button @click="addBlock('gallery-grid')" class="p-3 rounded-xl hover:bg-blue-50 text-gray-400 hover:text-blue-600 transition-colors group relative" title="照片墙">
-          <Grid :size="24" stroke-width="1.5" />
-          <span class="absolute left-16 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none shadow-lg">照片墙</span>
-        </button>
-      </aside>
-
-      <!-- Mobile Toolbar (Bottom) -->
-      <div class="md:hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur rounded-full shadow-lg shadow-blue-900/10 border border-gray-100 px-6 py-3 flex gap-6 z-50">
-        <button @click="addBlock('text-only')" class="p-2 text-gray-400 hover:text-blue-600"><Type :size="20" /></button>
-        <button @click="addBlock('image-top')" class="p-2 text-gray-400 hover:text-blue-600"><Image :size="20" /></button>
-        <button @click="addBlock('split-left')" class="p-2 text-gray-400 hover:text-blue-600"><Layout :size="20" /></button>
-        <button @click="addBlock('gallery-grid')" class="p-2 text-gray-400 hover:text-blue-600"><Grid :size="20" /></button>
-      </div>
-
+    <div class="flex-1 flex overflow-hidden" @contextmenu.prevent="showContextMenu" @click="hideContextMenu">
       <!-- Main Editor Area -->
       <main class="flex-1 overflow-y-auto p-4 md:p-6">
         <div class="max-w-4xl mx-auto space-y-8 pb-32">
@@ -179,7 +171,7 @@ const saveNote = async () => {
               class="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder-gray-300 text-gray-800 font-sans tracking-tight mb-8"
             />
             
-            <div class="space-y-8">
+            <div class="">
               <BlockRenderer 
                 v-for="block in blocks" 
                 :key="block.id" 
@@ -190,11 +182,39 @@ const saveNote = async () => {
             </div>
 
             <div v-if="blocks.length === 0" class="text-center py-20 text-gray-300 border-2 border-dashed border-gray-100 rounded-xl mt-8">
-              <p>点击左侧工具栏添加内容模块</p>
+              <p>右键点击空白处添加内容模块</p>
             </div>
           </div>
         </div>
       </main>
+
+      <!-- Custom Context Menu -->
+      <div 
+        v-if="contextMenu.visible" 
+        class="fixed z-50 bg-white/90 backdrop-blur rounded-lg shadow-xl border border-gray-100 py-2 min-w-[160px]"
+        :style="{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }"
+      >
+        <button @click="addBlockAndHide('text-only')" class="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
+          <Type :size="16" />
+          <span>纯文字</span>
+        </button>
+        <button @click="addBlockAndHide('image-top')" class="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
+          <Image :size="16" />
+          <span>单图置顶</span>
+        </button>
+        <button @click="addBlockAndHide('split-left')" class="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
+          <Layout :size="16" />
+          <span>左图右文</span>
+        </button>
+        <button @click="addBlockAndHide('split-right')" class="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
+          <Layout :size="16" class="transform rotate-180" />
+          <span>右图左文</span>
+        </button>
+        <button @click="addBlockAndHide('gallery-grid')" class="w-full px-4 py-2 text-left text-gray-700 hover:bg-blue-50 hover:text-blue-600 flex items-center gap-2">
+          <Grid :size="16" />
+          <span>照片墙</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>

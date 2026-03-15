@@ -79,8 +79,64 @@ def list_notes(
         .limit(limit)
     ).all()
 
+    # Pre-fetch blocks and media assets for all notes to avoid N+1 queries
+    note_ids = [note.id for note in items]
+    
+    # 1. Fetch blocks for all notes
+    blocks = session.exec(
+        select(NoteBlock)
+        .where(NoteBlock.note_id.in_(note_ids))
+        .order_by(NoteBlock.sort_order)
+    ).all()
+    
+    block_map = {}
+    for block in blocks:
+        block_map.setdefault(block.note_id, []).append(block)
+    
+    # 2. Fetch media relations for all blocks
+    block_ids = [block.id for block in blocks]
+    relations = session.exec(
+        select(BlockMediaRelation)
+        .where(BlockMediaRelation.block_id.in_(block_ids))
+        .order_by(BlockMediaRelation.sort_order)
+    ).all()
+    
+    media_ids = [relation.media_id for relation in relations]
+    media_assets = session.exec(
+        select(MediaAsset).where(MediaAsset.id.in_(media_ids))
+    ).all()
+    media_lookup = {media.id: media for media in media_assets}
+    
+    relation_map = {}
+    for relation in relations:
+        media = media_lookup.get(relation.media_id)
+        if media:
+            relation_map.setdefault(relation.block_id, []).append(media)
+
+    # 3. Construct response items with blocks and media assets
+    result_items = []
+    for note in items:
+        note_blocks = block_map.get(note.id, [])
+        note_dict = {
+            "id": note.id,
+            "title": note.title,
+            "summary": note.summary,
+            "created_at": note.created_at,
+            "book_theme": note.book_theme,
+            "status": note.status,
+            "blocks": []
+        }
+        
+        for block in note_blocks:
+             note_dict["blocks"].append({
+                 "id": block.id,
+                 "text_content": block.text_content,
+                 "media_assets": relation_map.get(block.id, [])
+             })
+        result_items.append(note_dict)
+
     return {
-        "items": items,
+        "items": result_items,
         "total": total,
         "offset": offset,
         "limit": limit,

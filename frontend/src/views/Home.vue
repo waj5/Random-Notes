@@ -10,6 +10,25 @@ const notesStore = useNotesStore()
 
 const notes = computed(() => notesStore.notes)
 
+const gridClass = computed(() => {
+  const count = notes.value.length;
+  if (count === 0) return '';
+  // 智能列数：根据卡片数量限制最大列数，防止卡片过少时被拉得太宽或挤在左边
+  // 但主要还是依赖 CSS 的响应式断点
+  
+  let base = 'columns-1 sm:columns-2 lg:columns-3';
+  
+  if (count > 9) {
+    base += ' xl:columns-4 2xl:columns-5';
+  } else if (count > 6) {
+    base += ' xl:columns-4';
+  }
+  // 如果卡片很少（<=6），在超宽屏下保持 3 列，这样卡片会变宽，填满屏幕，而不是留出空列
+  // 如果卡片多，就增加列数
+  
+  return base;
+})
+
 onMounted(async () => {
   await notesStore.fetchNotes()
 })
@@ -20,8 +39,8 @@ onMounted(async () => {
     <!-- 背景装饰 -->
     <div class="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-blue-50 to-transparent -z-10"></div>
     
-    <div class="max-w-7xl mx-auto">
-      <header class="flex items-center justify-between mb-12">
+    <div class="w-full px-4 sm:px-8 max-w-[1800px] mx-auto">
+      <header class="flex items-center justify-between mb-8 sm:mb-12">
         <div class="flex items-center gap-4">
           <div class="w-1.5 h-8 bg-blue-600 rounded-full"></div>
           <div>
@@ -55,8 +74,8 @@ onMounted(async () => {
         </div>
       </div>
       
-      <div v-if="notes.length > 0" class="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
-        <NoteCard v-for="note in notes" :key="note.id" :note="note" class="mb-6 break-inside-avoid shadow-[0_2px_12px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)]" />
+      <div v-if="notes.length > 0" :class="gridClass" class="gap-8 px-4">
+        <NoteCard v-for="note in notes" :key="note.id" :note="note" />
       </div>
       
       <div v-else class="text-center py-32 text-gray-400 bg-white rounded-3xl border border-gray-100 shadow-sm mx-auto max-w-2xl">

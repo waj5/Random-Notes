@@ -41,13 +41,28 @@ export const useNotesStore = defineStore('notes', {
             limit: 100 // Increase limit to ensure we see the new note
           }
         });
+        
+        // 我们需要把后端返回的 Note 结构转换成前端使用的结构
+        // 关键点：列表接口可能没有返回完整的 blocks 结构，或者返回了 media_assets
+        // 查看后端代码 app/api/routes/notes.py 的 list_notes 接口返回的是 NoteRead
+        // NoteRead 包含 blocks (List[BlockRead])。
+        // BlockRead 包含 media_assets (List[MediaAssetRead])
+        
         this.notes = response.data.data.items.map((n: any) => ({
           id: n.id.toString(),
           title: n.title,
           summary: n.summary,
           createdAt: new Date(n.created_at).getTime(),
           theme: n.book_theme || 'book-classic',
-          blocks: [],
+          // 列表页也需要构建 blocks，以便 NoteCard 能提取图片
+          blocks: n.blocks ? n.blocks.map((b: any) => ({
+            id: b.id.toString(),
+            // 简单映射一下类型，列表页主要为了取图片，类型不完全准确也没关系
+            type: 'text-only', 
+            content: b.text_content || '',
+            images: b.media_assets ? b.media_assets.map((m: any) => m.file_url) : [],
+            mediaIds: b.media_assets ? b.media_assets.map((m: any) => m.id) : [],
+          })) : [],
         }));
       } catch (err: any) {
         this.error = err.message;
@@ -140,8 +155,27 @@ export const useNotesStore = defineStore('notes', {
         const newNoteId = noteRes.data.data.id;
 
         // 2. Save Content (Blocks)
+        let firstMediaId = null;
         if (note.blocks && note.blocks.length > 0) {
-          await this.saveNoteContent(newNoteId.toString(), note.blocks, note);
+          const processedBlocks = await this.saveNoteContent(newNoteId.toString(), note.blocks, note);
+          
+          // Find first media id from processed blocks to set as cover
+           for (const block of processedBlocks) {
+             if (block.media_ids && block.media_ids.length > 0) {
+               firstMediaId = block.media_ids[0];
+               break;
+             }
+           }
+        }
+        
+        // 3. Update cover image if found
+        if (firstMediaId) {
+             await apiClient.put(`/notes/${newNoteId}`, {
+                title: note.title,
+                summary: summary,
+                book_theme: note.theme,
+                cover_media_id: firstMediaId
+            });
         }
 
         await this.fetchNotes();
@@ -177,7 +211,27 @@ export const useNotesStore = defineStore('notes', {
 
         // Update content
         if (updatedNote.blocks) {
-          await this.saveNoteContent(id, updatedNote.blocks, updatedNote);
+          const processedBlocks = await this.saveNoteContent(id, updatedNote.blocks, updatedNote);
+           
+          // Update cover image if needed (check if existing cover is valid, or set new one)
+          // For simplicity, let's update cover if we have images and current cover is not set or we want to update it.
+          // Let's find the first image in the note and set it as cover.
+          let firstMediaId = null;
+          for (const block of processedBlocks) {
+             if (block.media_ids && block.media_ids.length > 0) {
+               firstMediaId = block.media_ids[0];
+               break;
+             }
+           }
+           
+           if (firstMediaId) {
+                await apiClient.put(`/notes/${id}`, {
+                    title: updatedNote.title,
+                    summary: summary,
+                    book_theme: updatedNote.theme,
+                    cover_media_id: firstMediaId
+                });
+           }
         }
         
         // Refresh local
@@ -252,6 +306,8 @@ export const useNotesStore = defineStore('notes', {
         book_theme: noteMeta.theme,
         blocks: processedBlocks
       });
+      
+      return processedBlocks;
     },
 
     async deleteNote(id: string) {

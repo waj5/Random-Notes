@@ -10,12 +10,32 @@ from app.core.config import (
     IMAGE_UPLOAD_DIR,
     IMAGE_UPLOAD_URL_PREFIX,
     MAX_IMAGE_SIZE,
+    STORAGE_TYPE,
+    QINIU_ACCESS_KEY,
+    QINIU_SECRET_KEY,
+    QINIU_BUCKET_NAME,
+    QINIU_DOMAIN,
 )
 from app.models.block_media_relation import BlockMediaRelation
 from app.models.media_asset import MediaAsset
 from app.models.note import Note
 from app.models.user import User
 from app.schemas.media_asset import MediaAssetCreate
+from qiniu import Auth, put_data
+
+
+def upload_to_qiniu(filename: str, content: bytes):
+    q = Auth(QINIU_ACCESS_KEY, QINIU_SECRET_KEY)
+    token = q.upload_token(QINIU_BUCKET_NAME, filename, 3600)
+    ret, info = put_data(token, filename, content)
+    if info.status_code != 200:
+        raise HTTPException(status_code=500, detail="Failed to upload to Qiniu")
+    
+    domain = QINIU_DOMAIN.rstrip("/")
+    if not domain.startswith("http"):
+        domain = f"http://{domain}"
+        
+    return f"{domain}/{filename}"
 
 
 def create_media_asset(session: Session, current_user: User, data: MediaAssetCreate):
@@ -66,13 +86,18 @@ def upload_image_and_create_media_asset(
 
     extension = ALLOWED_IMAGE_MIME_TYPES[file.content_type]
     filename = f"{current_user.id}_{uuid4().hex}{extension}"
-    file_key = f"images/{current_user.id}/{filename}"
-
-    IMAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    save_path = IMAGE_UPLOAD_DIR / filename
-    save_path.write_bytes(content)
-
-    file_url = f"{IMAGE_UPLOAD_URL_PREFIX}/{filename}"
+    
+    if STORAGE_TYPE == "qiniu":
+        if not all([QINIU_ACCESS_KEY, QINIU_SECRET_KEY, QINIU_BUCKET_NAME, QINIU_DOMAIN]):
+             raise HTTPException(status_code=500, detail="Qiniu configuration missing")
+        file_url = upload_to_qiniu(filename, content)
+        file_key = filename
+    else:
+        file_key = f"images/{current_user.id}/{filename}"
+        IMAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        save_path = IMAGE_UPLOAD_DIR / filename
+        save_path.write_bytes(content)
+        file_url = f"{IMAGE_UPLOAD_URL_PREFIX}/{filename}"
 
     media = MediaAsset(
         user_id=current_user.id,

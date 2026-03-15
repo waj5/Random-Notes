@@ -14,7 +14,7 @@ const handleFileChange = (event: Event) => {
 </script>
 
 <template>
-  <div class="relative w-full h-full min-h-[200px] border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
+  <div class="relative w-full h-full border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer group">
     <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileChange" />
     <div class="text-center text-gray-400 group-hover:text-gray-600">
       <div class="mb-2">
