@@ -9,12 +9,20 @@ export type LayoutType =
   | 'split-right'     // 多图-右图左文
   | 'gallery-grid';   // 多图-照片墙
 
+export type GalleryTemplate =
+  | 'grid'
+  | 'mosaic'
+  | 'spotlight'
+  | 'film'
+  | 'heart';
+
 export interface NoteBlock {
   id: string;
   type: LayoutType;
   content: string;    // 文字内容
   images: string[];   // 图片URL数组
   mediaIds?: number[]; // 关联的媒体ID
+  galleryTemplate?: GalleryTemplate;
 }
 
 export interface Note {
@@ -62,6 +70,7 @@ export const useNotesStore = defineStore('notes', {
             content: b.text_content || '',
             images: b.media_assets ? b.media_assets.map((m: any) => m.file_url) : [],
             mediaIds: b.media_assets ? b.media_assets.map((m: any) => m.id) : [],
+            galleryTemplate: this.parseGalleryTemplate(b.caption),
           })) : [],
         }));
       } catch (err: any) {
@@ -104,6 +113,7 @@ export const useNotesStore = defineStore('notes', {
               content: b.text_content || '',
               images: b.media_assets.map((m: any) => m.file_url),
               mediaIds: b.media_assets.map((m: any) => m.id),
+              galleryTemplate: this.parseGalleryTemplate(b.caption),
             };
           }),
         };
@@ -126,7 +136,14 @@ export const useNotesStore = defineStore('notes', {
       // Convert base64 to Blob
       const fetchResponse = await fetch(base64Data);
       const blob = await fetchResponse.blob();
-      const file = new File([blob], "image.jpg", { type: "image/jpeg" });
+      const mimeType = base64Data.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/)?.[1] || blob.type || 'image/jpeg';
+      const extensionMap: Record<string, string> = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp',
+      };
+      const extension = extensionMap[mimeType] || 'jpg';
+      const file = new File([blob], `image.${extension}`, { type: mimeType });
 
       const formData = new FormData();
       formData.append('file', file);
@@ -294,6 +311,9 @@ export const useNotesStore = defineStore('notes', {
           text_content: block.content,
           text_align: 'left',
           layout_style: layoutStyle,
+          caption: block.type === 'gallery-grid'
+            ? this.serializeGalleryTemplate(block.galleryTemplate)
+            : undefined,
           media_ids: mediaIds,
         };
       }));
@@ -308,6 +328,26 @@ export const useNotesStore = defineStore('notes', {
       });
       
       return processedBlocks;
+    },
+
+    parseGalleryTemplate(caption?: string): GalleryTemplate {
+      const value = caption?.startsWith('gallery_template:')
+        ? caption.slice('gallery_template:'.length)
+        : '';
+
+      switch (value) {
+        case 'mosaic':
+        case 'spotlight':
+        case 'film':
+        case 'heart':
+          return value;
+        default:
+          return 'grid';
+      }
+    },
+
+    serializeGalleryTemplate(template?: GalleryTemplate) {
+      return `gallery_template:${template || 'grid'}`;
     },
 
     async deleteNote(id: string) {

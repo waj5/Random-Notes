@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useNotesStore, Note, NoteBlock, LayoutType } from '../stores/notes'
+import { useNotesStore } from '../stores/notes'
+import type { Note, NoteBlock, LayoutType } from '../stores/notes'
 import { ArrowLeft, Save, Type, Image, Layout, Grid, Send } from 'lucide-vue-next'
 import BlockRenderer from '../components/BlockEditor.vue'
 
@@ -36,14 +37,15 @@ const addBlock = (type: LayoutType) => {
     id: Date.now().toString() + Math.random().toString().slice(2, 5),
     type,
     content: '',
-    images: []
+    images: [],
+    galleryTemplate: type === 'gallery-grid' ? 'grid' : undefined
   })
 }
 
 const updateBlock = (id: string, field: keyof NoteBlock, value: any) => {
   const index = blocks.value.findIndex(b => b.id === id)
   if (index !== -1) {
-    blocks.value[index] = { ...blocks.value[index], [field]: value }
+    blocks.value[index] = { ...blocks.value[index], [field]: value } as NoteBlock
   }
 }
 
@@ -105,10 +107,11 @@ const saveNote = async () => {
   
   isSaving.value = true
   try {
+    const existingNote = isEditing.value ? await notesStore.getNoteById(noteId.value) : undefined
     const note: Note = {
       id: isEditing.value ? noteId.value : Date.now().toString(),
       title: title.value || '无题',
-      createdAt: isEditing.value ? (await notesStore.getNoteById(noteId.value)?.createdAt || Date.now()) : Date.now(),
+      createdAt: existingNote?.createdAt || Date.now(),
       blocks: blocks.value,
       theme: 'book-classic'
     }

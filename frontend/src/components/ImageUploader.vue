@@ -1,14 +1,94 @@
 <script setup lang="ts">
 const emit = defineEmits(['upload'])
 
-const handleFileChange = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (file) {
+const MAX_UPLOAD_BYTES = 4.5 * 1024 * 1024
+const MAX_DIMENSION = 2400
+
+const blobToDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = (e) => {
-      emit('upload', e.target?.result as string)
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Failed to read image blob'))
+    reader.readAsDataURL(blob)
+  })
+
+const loadImage = (src: string) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = src
+  })
+
+const canvasToBlob = (canvas: HTMLCanvasElement, quality: number) =>
+  new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob)
+          return
+        }
+        reject(new Error('Failed to convert canvas to blob'))
+      },
+      'image/jpeg',
+      quality
+    )
+  })
+
+const optimizeImage = async (file: File) => {
+  const objectUrl = URL.createObjectURL(file)
+
+  try {
+    const image = await loadImage(objectUrl)
+    const ratio = Math.min(1, MAX_DIMENSION / Math.max(image.width, image.height))
+    const targetWidth = Math.max(1, Math.round(image.width * ratio))
+    const targetHeight = Math.max(1, Math.round(image.height * ratio))
+
+    const canvas = document.createElement('canvas')
+    canvas.width = targetWidth
+    canvas.height = targetHeight
+
+    const context = canvas.getContext('2d')
+    if (!context) {
+      throw new Error('Canvas is not supported')
     }
-    reader.readAsDataURL(file)
+
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, targetWidth, targetHeight)
+    context.drawImage(image, 0, 0, targetWidth, targetHeight)
+
+    let bestBlob: Blob | null = null
+    for (const quality of [0.92, 0.85, 0.78, 0.7, 0.6, 0.5]) {
+      const blob = await canvasToBlob(canvas, quality)
+      bestBlob = blob
+      if (blob.size <= MAX_UPLOAD_BYTES) {
+        return await blobToDataUrl(blob)
+      }
+    }
+
+    if (!bestBlob) {
+      throw new Error('Image compression failed')
+    }
+
+    return await blobToDataUrl(bestBlob)
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  try {
+    const optimizedImage = await optimizeImage(file)
+    emit('upload', optimizedImage)
+  } catch (error) {
+    console.error('Failed to process image:', error)
+    alert('图片处理失败')
+  } finally {
+    input.value = ''
   }
 }
 </script>
