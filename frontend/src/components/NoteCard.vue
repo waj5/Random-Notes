@@ -98,6 +98,12 @@ const toggleFollow = async (e: Event) => {
 
   await authStore.followUser(props.note.userId)
 }
+
+const openAuthorSpace = (e: Event) => {
+  e.stopPropagation()
+  if (!props.note.userId) return
+  router.push(`/space/${props.note.userId}`)
+}
 </script>
 
 <template>
@@ -108,12 +114,18 @@ const toggleFollow = async (e: Event) => {
   >
     <article class="rounded-3xl border border-sky-100 bg-white/92 shadow-[0_14px_36px_rgba(54,120,160,0.08)] backdrop-blur">
       <div class="flex items-start gap-3 p-5 pb-4">
-        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-cyan-300 text-sm font-bold text-white">
-          {{ (authorLabel || 'U').slice(-1) }}
-        </div>
+        <button
+          @click="openAuthorSpace"
+          class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-sky-400 to-cyan-300 text-sm font-bold text-white"
+        >
+          <img v-if="note.authorAvatarUrl" :src="note.authorAvatarUrl" class="h-full w-full object-cover" />
+          <span v-else>{{ (authorLabel || 'U').slice(-1) }}</span>
+        </button>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2">
-            <span class="truncate text-sm font-semibold text-slate-800">{{ authorLabel }}</span>
+            <button @click="openAuthorSpace" class="truncate text-sm font-semibold text-slate-800 hover:text-sky-500">
+              {{ authorLabel }}
+            </button>
             <span class="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-600">公开动态</span>
           </div>
           <div class="mt-1 text-xs text-slate-400">

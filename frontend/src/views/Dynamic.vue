@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { BellRing, Plus, Sparkles, UserPlus } from 'lucide-vue-next'
+import { BellRing, ChevronDown, LogOut, Plus, Settings, Sparkles, UserPlus } from 'lucide-vue-next'
 import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
@@ -13,12 +13,38 @@ const authStore = useAuthStore()
 const notes = computed(() => notesStore.followingNotes)
 const followingCount = computed(() => authStore.followingIds.length)
 const featuredNote = computed(() => notes.value[0])
+const profileMenuOpen = ref(false)
+
+const headerBackgroundStyle = computed(() => (
+  authStore.user?.profile_background_url
+    ? {
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), url(${authStore.user.profile_background_url})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : {}
+))
+
+const handleWindowClick = () => {
+  profileMenuOpen.value = false
+}
+
+const logout = async () => {
+  profileMenuOpen.value = false
+  await authStore.logout()
+  router.push('/login')
+}
 
 onMounted(async () => {
+  window.addEventListener('click', handleWindowClick)
   await Promise.all([
     authStore.fetchFollowingIds(),
     notesStore.fetchFollowingNotes(),
   ])
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', handleWindowClick)
 })
 </script>
 
@@ -37,23 +63,86 @@ onMounted(async () => {
 
         <div class="flex items-center gap-3">
           <button
-            @click="router.push('/mine')"
-            class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-sky-300 hover:text-sky-500"
-          >
-            我的
-          </button>
-          <button
             @click="router.push('/create')"
             class="flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] transition-colors hover:bg-sky-600"
           >
             <Plus :size="18" />
             <span>发布动态</span>
           </button>
+          <div class="relative" @click.stop>
+            <button
+              @click="profileMenuOpen = !profileMenuOpen"
+              class="flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white pl-1 pr-3 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-500"
+            >
+              <div v-if="authStore.user?.avatar_url" class="h-9 w-9 overflow-hidden rounded-full bg-slate-100">
+                <img :src="authStore.user.avatar_url" class="h-full w-full object-cover" />
+              </div>
+              <div v-else class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-500">
+                {{ (authStore.user?.nickname || authStore.user?.username || '我').slice(0, 1) }}
+              </div>
+              <ChevronDown :size="16" />
+            </button>
+            <div
+              v-if="profileMenuOpen"
+              class="absolute right-0 top-14 z-40 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_40px_rgba(56,84,130,0.12)]"
+            >
+              <button
+                @click="router.push('/mine')"
+                class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-sky-50 hover:text-sky-500"
+              >
+                <Settings :size="16" />
+                <span>个人中心</span>
+              </button>
+              <button
+                @click="logout"
+                class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50"
+              >
+                <LogOut :size="16" />
+                <span>退出登录</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="mx-auto grid max-w-[1500px] gap-6 px-4 py-6 lg:grid-cols-[260px_minmax(0,760px)_300px]">
+    <div class="mx-auto max-w-[1500px] px-4 py-6">
+      <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(56,84,130,0.08)]">
+        <div class="h-48 bg-[linear-gradient(120deg,#67d6ff_0%,#90b8ff_40%,#f4c8ff_100%)]" :style="headerBackgroundStyle"></div>
+        <div class="px-6 pb-6">
+          <div class="-mt-14 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div class="flex items-end gap-4">
+              <div v-if="authStore.user?.avatar_url" class="h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-white shadow-lg">
+                <img :src="authStore.user.avatar_url" class="h-full w-full object-cover" />
+              </div>
+              <div v-else class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-white text-3xl font-bold text-sky-500 shadow-lg">
+                {{ (authStore.user?.nickname || authStore.user?.username || '我').slice(0, 1) }}
+              </div>
+              <div class="pb-2">
+                <h1 class="text-3xl font-bold text-slate-900">关注动态</h1>
+                <p class="mt-2 text-sm text-slate-500">这里只看你关注的人发布的公开内容，像专属时间线一样刷新。</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6 rounded-3xl border border-white/30 bg-white/15 px-5 py-4 text-center backdrop-blur-md">
+              <div>
+                <div class="text-2xl font-bold text-slate-900">{{ notes.length }}</div>
+                <div class="mt-1 text-xs text-slate-400">动态数量</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-slate-900">{{ followingCount }}</div>
+                <div class="mt-1 text-xs text-slate-400">已关注</div>
+              </div>
+              <div>
+                <div class="text-2xl font-bold text-slate-900">{{ featuredNote ? 1 : 0 }}</div>
+                <div class="mt-1 text-xs text-slate-400">最新推荐</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-[260px_minmax(0,760px)_300px]">
       <aside class="space-y-4 lg:sticky lg:top-24 lg:h-fit">
         <section class="overflow-hidden rounded-3xl border border-white/60 bg-white/70 shadow-[0_18px_40px_rgba(74,144,164,0.10)] backdrop-blur">
           <div class="bg-gradient-to-br from-sky-300 via-cyan-200 to-white px-5 py-6">
@@ -126,6 +215,7 @@ onMounted(async () => {
           </ul>
         </section>
       </aside>
+      </div>
     </div>
   </div>
 </template>

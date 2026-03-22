@@ -15,6 +15,7 @@ const closePreview = () => {
 }
 
 const getDownloadUrl = (image: string) => image.replace('/view?', '/download?')
+const inlineImageClass = 'block h-auto w-auto max-w-full max-h-[420px] object-contain cursor-zoom-in'
 
 const getGalleryTemplate = (block: NoteBlock): GalleryTemplate => block.galleryTemplate || 'grid'
 
@@ -84,8 +85,8 @@ const getHeartGridStyle = (block: NoteBlock) => {
 
     <!-- Image Top -->
     <div v-else-if="block.type === 'image-top'" class="space-y-6">
-      <div v-if="block.images.length > 0" class="overflow-hidden rounded-xl shadow-md">
-        <img :src="block.images[0]" class="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700 cursor-zoom-in" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
+      <div v-if="block.images.length > 0" class="inline-flex max-w-full overflow-hidden rounded-xl shadow-md">
+        <img :src="block.images[0]" :class="`${inlineImageClass} transform hover:scale-105 transition-transform duration-700`" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
       </div>
       <div v-if="block.content" class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap">
         {{ block.content }}
@@ -97,32 +98,32 @@ const getHeartGridStyle = (block: NoteBlock) => {
       <div v-if="block.content" class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap">
         {{ block.content }}
       </div>
-      <div v-if="block.images.length > 0" class="overflow-hidden rounded-xl shadow-md">
-        <img :src="block.images[0]" class="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700 cursor-zoom-in" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
+      <div v-if="block.images.length > 0" class="inline-flex max-w-full overflow-hidden rounded-xl shadow-md">
+        <img :src="block.images[0]" :class="`${inlineImageClass} transform hover:scale-105 transition-transform duration-700`" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
       </div>
     </div>
 
     <!-- Split Left -->
-    <div v-else-if="block.type === 'split-left'" class="clearfix relative mb-2">
-      <div class="float-left w-5/12 mr-6 mb-2 relative z-10 space-y-4">
-        <div v-for="(img, idx) in block.images" :key="idx" class="overflow-hidden rounded-xl shadow-md rotate-1 hover:rotate-0 transition-transform duration-300 bg-white p-2 pb-8">
-           <img :src="img" class="w-full h-auto object-cover rounded-lg cursor-zoom-in" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
+    <div v-else-if="block.type === 'split-left'" class="mb-2 flex items-start gap-6">
+      <div class="relative z-10 flex max-w-[45%] shrink-0 flex-col space-y-4">
+        <div v-for="(img, idx) in block.images" :key="idx" class="inline-block max-w-full overflow-hidden rounded-xl shadow-md rotate-1 hover:rotate-0 transition-transform duration-300 bg-white p-2 pb-8">
+           <img :src="img" class="block h-auto w-auto max-w-full max-h-[320px] object-contain rounded-lg cursor-zoom-in" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
         </div>
       </div>
-      <div class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap break-words">
+      <div class="min-w-0 flex-1 prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap break-words">
         {{ block.content }}
       </div>
     </div>
 
     <!-- Split Right -->
-    <div v-else-if="block.type === 'split-right'" class="clearfix relative mb-2">
-      <div class="float-right w-5/12 ml-6 mb-2 relative z-10 space-y-4">
-        <div v-for="(img, idx) in block.images" :key="idx" class="overflow-hidden rounded-xl shadow-md -rotate-1 hover:rotate-0 transition-transform duration-300 bg-white p-2 pb-8">
-           <img :src="img" class="w-full h-auto object-cover rounded-lg cursor-zoom-in" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
-        </div>
-      </div>
-      <div class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap break-words">
+    <div v-else-if="block.type === 'split-right'" class="mb-2 flex items-start gap-6">
+      <div class="min-w-0 flex-1 prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap break-words">
         {{ block.content }}
+      </div>
+      <div class="relative z-10 flex max-w-[45%] shrink-0 flex-col space-y-4">
+        <div v-for="(img, idx) in block.images" :key="idx" class="inline-block max-w-full overflow-hidden rounded-xl shadow-md -rotate-1 hover:rotate-0 transition-transform duration-300 bg-white p-2 pb-8">
+           <img :src="img" class="block h-auto w-auto max-w-full max-h-[320px] object-contain rounded-lg cursor-zoom-in" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
+        </div>
       </div>
     </div>
 
@@ -141,14 +142,19 @@ const getHeartGridStyle = (block: NoteBlock) => {
 
   <Teleport to="body">
     <div v-if="previewImage" class="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out" @click="closePreview">
-      <div class="relative max-w-full max-h-full" @click.stop @contextmenu.prevent>
+      <div class="relative flex max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] items-center justify-center" @click.stop @contextmenu.prevent>
         <a
           :href="getDownloadUrl(previewImage)"
           class="absolute right-3 top-3 z-10 rounded-full bg-black/60 px-4 py-2 text-sm text-white transition hover:bg-black/75"
         >
           下载原图
         </a>
-        <img :src="previewImage" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" @contextmenu.prevent @dragstart.prevent />
+        <img
+          :src="previewImage"
+          class="block max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] object-contain rounded-lg shadow-2xl"
+          @contextmenu.prevent
+          @dragstart.prevent
+        />
       </div>
     </div>
   </Teleport>

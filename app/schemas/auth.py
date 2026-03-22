@@ -39,9 +39,21 @@ class TokenResponse(BaseModel):
 class UserPublic(BaseModel):
     id: int
     username: str
+    phone: str | None = None
     nickname: str
     email: str | None = None
     avatar_url: str | None = None
+    profile_background_url: str | None = None
+
+
+class UserProfileUpdate(BaseModel):
+    nickname: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    avatar_url: str | None = None
+    profile_background_url: str | None = None
+    current_password: str | None = None
+    new_password: str | None = None
 
 
 class MessageResponse(BaseModel):

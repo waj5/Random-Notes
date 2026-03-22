@@ -5,9 +5,11 @@ import apiClient from '../api/client'
 interface User {
   id: number;
   username: string;
+  phone?: string;
   nickname: string;
   email?: string;
   avatar_url?: string;
+  profile_background_url?: string;
 }
 
 interface AuthState {
@@ -96,6 +98,20 @@ export const useAuthStore = defineStore('auth', {
         this.clearAuthState();
         throw error;
       }
+    },
+    async updateProfile(data: {
+      nickname?: string;
+      phone?: string;
+      email?: string;
+      avatar_url?: string;
+      profile_background_url?: string;
+      current_password?: string;
+      new_password?: string;
+    }) {
+      const response = await apiClient.put('/auth/me', data)
+      this.user = response.data.data
+      localStorage.setItem('user', JSON.stringify(this.user))
+      return this.user
     },
     async fetchFollowingIds() {
       try {

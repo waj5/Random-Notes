@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { BookOpen, FileText, Heart, Images, Plus } from 'lucide-vue-next'
+import { BookOpen, ChevronDown, FileText, Heart, Images, LogOut, Plus, Settings, UserRound } from 'lucide-vue-next'
 import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
@@ -21,6 +21,19 @@ const draftCount = computed(() => notes.value.filter(note => note.status !== 'pu
 const imageCount = computed(() => notes.value.reduce((total, note) => total + note.blocks.reduce((sum, block) => sum + block.images.length, 0), 0))
 const activeTab = ref<MyTab>('posts')
 const activeFilter = ref<MyFilter>('all')
+const profileOpen = ref(false)
+const profileMenuOpen = ref(false)
+const profileForm = ref({
+  nickname: '',
+  phone: '',
+  email: '',
+  avatar_url: '',
+  profile_background_url: '',
+  current_password: '',
+  new_password: '',
+})
+const profileSaving = ref(false)
+const profileMessage = ref('')
 
 const validTabs: MyTab[] = ['posts', 'activity', 'albums', 'favorites']
 const validFilters: MyFilter[] = ['all', 'published', 'draft']
@@ -88,9 +101,64 @@ const albumItems = computed(() =>
     .filter(item => item.imageCount > 0)
 )
 
+const headerBackgroundStyle = computed(() => (
+  user.value?.profile_background_url
+    ? {
+        backgroundImage: `linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), url(${user.value.profile_background_url})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : {}
+))
+
+const openProfile = () => {
+  profileForm.value = {
+    nickname: user.value?.nickname || '',
+    phone: user.value?.phone || '',
+    email: user.value?.email || '',
+    avatar_url: user.value?.avatar_url || '',
+    profile_background_url: user.value?.profile_background_url || '',
+    current_password: '',
+    new_password: '',
+  }
+  profileMessage.value = ''
+  profileMenuOpen.value = false
+  profileOpen.value = true
+}
+
+const saveProfile = async () => {
+  profileSaving.value = true
+  profileMessage.value = ''
+  try {
+    await authStore.updateProfile(profileForm.value)
+    profileMessage.value = '资料已更新'
+    profileForm.value.current_password = ''
+    profileForm.value.new_password = ''
+  } catch (error: any) {
+    profileMessage.value = error.response?.data?.detail || error.response?.data?.message || error.message || '更新失败'
+  } finally {
+    profileSaving.value = false
+  }
+}
+
+const logout = async () => {
+  profileMenuOpen.value = false
+  await authStore.logout()
+  router.push('/login')
+}
+
+const handleWindowClick = () => {
+  profileMenuOpen.value = false
+}
+
 onMounted(async () => {
+  window.addEventListener('click', handleWindowClick)
   syncStateFromRoute()
   await notesStore.fetchMyNotes()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', handleWindowClick)
 })
 
 watch(() => route.query, () => {
@@ -111,23 +179,62 @@ watch(() => route.query, () => {
           </nav>
         </div>
 
-        <button
-          @click="router.push('/create')"
-          class="flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] transition-colors hover:bg-sky-600"
-        >
-          <Plus :size="18" />
-          <span>新建笔记</span>
-        </button>
+        <div class="flex items-center gap-3">
+          <button
+            @click="router.push('/create')"
+            class="flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] transition-colors hover:bg-sky-600"
+          >
+            <Plus :size="18" />
+            <span>新建笔记</span>
+          </button>
+          <div class="relative" @click.stop>
+            <button
+              @click="profileMenuOpen = !profileMenuOpen"
+              class="flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white pl-1 pr-3 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-500"
+            >
+              <div v-if="user?.avatar_url" class="h-9 w-9 overflow-hidden rounded-full bg-slate-100">
+                <img :src="user.avatar_url" class="h-full w-full object-cover" />
+              </div>
+              <div v-else class="flex h-9 w-9 items-center justify-center rounded-full bg-sky-50 text-sm font-bold text-sky-500">
+                {{ (user?.nickname || user?.username || '我').slice(0, 1) }}
+              </div>
+              <ChevronDown :size="16" />
+            </button>
+
+            <div
+              v-if="profileMenuOpen"
+              class="absolute right-0 top-14 z-40 w-48 rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_40px_rgba(56,84,130,0.12)]"
+            >
+              <button
+                @click="openProfile"
+                class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-600 transition-colors hover:bg-sky-50 hover:text-sky-500"
+              >
+                <Settings :size="16" />
+                <span>个人中心</span>
+              </button>
+              <button
+                @click="logout"
+                class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50"
+              >
+                <LogOut :size="16" />
+                <span>退出登录</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="mx-auto max-w-[1500px] px-4 py-6">
       <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(56,84,130,0.08)]">
-        <div class="h-48 bg-[linear-gradient(120deg,#67d6ff_0%,#90b8ff_40%,#f4c8ff_100%)]"></div>
+        <div class="h-48 bg-[linear-gradient(120deg,#67d6ff_0%,#90b8ff_40%,#f4c8ff_100%)]" :style="headerBackgroundStyle"></div>
         <div class="px-6 pb-6">
           <div class="-mt-14 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div class="flex items-end gap-4">
-              <div class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-white text-3xl font-bold text-sky-500 shadow-lg">
+              <div v-if="user?.avatar_url" class="h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-white shadow-lg">
+                <img :src="user.avatar_url" class="h-full w-full object-cover" />
+              </div>
+              <div v-else class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-white text-3xl font-bold text-sky-500 shadow-lg">
                 {{ (user?.nickname || user?.username || '我').slice(0, 1) }}
               </div>
               <div class="pb-2">
@@ -136,7 +243,7 @@ watch(() => route.query, () => {
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-6 rounded-3xl bg-slate-50 px-5 py-4 text-center">
+            <div class="grid grid-cols-3 gap-6 rounded-3xl border border-white/30 bg-white/15 px-5 py-4 text-center backdrop-blur-md">
               <div>
                 <div class="text-2xl font-bold text-slate-900">{{ notes.length }}</div>
                 <div class="mt-1 text-xs text-slate-400">全部动态</div>
@@ -225,7 +332,7 @@ watch(() => route.query, () => {
                 @click="router.push('/create')"
                 class="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-sky-300 hover:text-sky-500"
               >
-                管理内容
+                新增随笔
               </button>
             </div>
           </section>
@@ -242,7 +349,7 @@ watch(() => route.query, () => {
             <button
               v-for="item in albumItems"
               :key="item.id"
-              @click="router.push(`/album/${item.noteId}`)"
+              @click="router.push({ path: `/album/${item.noteId}`, query: { source: 'mine' } })"
               class="group overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-[0_18px_40px_rgba(56,84,130,0.06)] transition-transform hover:-translate-y-1"
             >
               <div class="grid aspect-square grid-cols-2 gap-1 overflow-hidden bg-slate-100 p-1">
@@ -263,9 +370,12 @@ watch(() => route.query, () => {
           </div>
 
           <div v-else class="rounded-3xl border border-slate-200 bg-white px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
-            <div class="mb-6 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-50 text-sky-400">
+            <button
+              @click="router.push('/create')"
+              class="mb-6 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-50 text-sky-400 transition-colors hover:bg-sky-100"
+            >
               <Plus :size="40" stroke-width="2" />
-            </div>
+            </button>
             <p class="mb-2 text-xl font-bold text-gray-800">
               {{
                 activeTab === 'favorites'
@@ -288,6 +398,13 @@ watch(() => route.query, () => {
                       : '只有你自己能看到未发布和已发布的全部内容'
               }}
             </p>
+            <button
+              v-if="activeTab !== 'favorites'"
+              @click="router.push('/create')"
+              class="mt-5 rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-600"
+            >
+              新增随笔
+            </button>
           </div>
         </main>
 
@@ -331,6 +448,10 @@ watch(() => route.query, () => {
                 <span class="font-medium text-slate-800">{{ user?.username || '-' }}</span>
               </div>
               <div class="flex items-center justify-between">
+                <span>手机号</span>
+                <span class="font-medium text-slate-800">{{ user?.phone || '-' }}</span>
+              </div>
+              <div class="flex items-center justify-between">
                 <span>偏好</span>
                 <span class="flex items-center gap-1 font-medium text-pink-500">
                   <Heart :size="14" />
@@ -342,5 +463,48 @@ watch(() => route.query, () => {
         </aside>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div v-if="profileOpen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/45 p-4" @click="profileOpen = false">
+        <div class="w-full max-w-xl rounded-[28px] bg-white p-6 shadow-2xl" @click.stop>
+          <div class="mb-5 flex items-center gap-3">
+            <div class="flex h-11 w-11 items-center justify-center rounded-full bg-sky-50 text-sky-500">
+              <UserRound :size="20" />
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">个人中心</h2>
+              <p class="text-sm text-slate-400">修改昵称、联系方式和密码</p>
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <input v-model="profileForm.nickname" type="text" placeholder="昵称" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400" />
+            <input v-model="profileForm.phone" type="tel" placeholder="手机号" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400" />
+            <input v-model="profileForm.email" type="email" placeholder="邮箱" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
+            <input v-model="profileForm.avatar_url" type="text" placeholder="头像链接" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
+            <input v-model="profileForm.profile_background_url" type="text" placeholder="顶部背景链接" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
+            <input v-model="profileForm.current_password" type="password" placeholder="当前密码（修改密码时必填）" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
+            <input v-model="profileForm.new_password" type="password" placeholder="新密码" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
+          </div>
+
+          <p v-if="profileMessage" class="mt-4 text-sm" :class="profileMessage === '资料已更新' ? 'text-emerald-500' : 'text-red-500'">
+            {{ profileMessage }}
+          </p>
+
+          <div class="mt-6 flex justify-end gap-3">
+            <button @click="profileOpen = false" class="rounded-full bg-slate-100 px-5 py-2 text-sm font-medium text-slate-600">
+              关闭
+            </button>
+            <button
+              @click="saveProfile"
+              :disabled="profileSaving"
+              class="rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {{ profileSaving ? '保存中...' : '保存修改' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

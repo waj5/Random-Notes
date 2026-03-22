@@ -4,6 +4,7 @@ import Login from '../views/Login.vue'
 import Home from '../views/Home.vue'
 import Dynamic from '../views/Dynamic.vue'
 import MyNotes from '../views/MyNotes.vue'
+import UserSpace from '../views/UserSpace.vue'
 import AlbumDetail from '../views/AlbumDetail.vue'
 import NoteEditor from '../views/NoteEditor.vue'
 import NoteDetail from '../views/NoteDetail.vue'
@@ -38,6 +39,12 @@ const router = createRouter({
       path: '/mine',
       name: 'mine',
       component: MyNotes,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/space/:userId',
+      name: 'user-space',
+      component: UserSpace,
       meta: { requiresAuth: true }
     },
     {

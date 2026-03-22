@@ -18,6 +18,16 @@ const albumImages = computed(() =>
 )
 
 const backToAlbums = () => {
+  if (route.query.source === 'space' && typeof route.query.userId === 'string') {
+    router.push({
+      path: `/space/${route.query.userId}`,
+      query: {
+        tab: 'albums',
+      },
+    })
+    return
+  }
+
   router.push({
     path: '/mine',
     query: {

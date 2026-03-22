@@ -381,6 +381,7 @@ def list_following_notes(
 
 def list_hot_notes(
     session: Session,
+    current_user: User | None,
     offset: int = 0,
     limit: int = 10,
 ):
@@ -405,6 +406,26 @@ def list_hot_notes(
         return freshness * 0.42 + follower_score * 0.28 + image_density * 0.2 + text_density * 0.1
 
     return _build_note_list_response(session, filters, offset, limit, current_user, hot_score)
+
+
+def list_user_public_notes(
+    session: Session,
+    current_user: User | None,
+    user_id: int,
+    offset: int = 0,
+    limit: int = 10,
+):
+    author = session.get(User, user_id)
+    if not author or author.deleted_at is not None or author.status != "active":
+        raise HTTPException(status_code=404, detail="User not found")
+
+    filters = [
+        Note.deleted_at.is_(None),
+        Note.status == "published",
+        Note.is_private.is_(False),
+        Note.user_id == user_id,
+    ]
+    return _build_note_list_response(session, filters, offset, limit, current_user)
 
 
 def get_note(session: Session, current_user: User, note_id: int):

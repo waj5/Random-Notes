@@ -16,9 +16,13 @@ from app.core.security import (
     decode_token,
 )
 from app.models.sms_verification_code import SmsVerificationCode
+from app.models.note import Note
+from app.models.note_block import NoteBlock
+from app.models.block_media_relation import BlockMediaRelation
 from app.models.user import User, UserStatus
 from app.models.user_session import UserSession
-from app.schemas.auth import TokenResponse, UserLogin, UserRegister
+from app.models.user_follow import UserFollow
+from app.schemas.auth import TokenResponse, UserLogin, UserProfileUpdate, UserRegister
 
 PHONE_PATTERN = re.compile(r"^(?:\+?86)?1\d{10}$")
 
@@ -257,6 +261,99 @@ def refresh_user_token(session: Session, refresh_token: str) -> TokenResponse:
         access_token=new_access_token,
         refresh_token=new_refresh_token,
     )
+
+
+def update_current_user(session: Session, current_user: User, data: UserProfileUpdate):
+    if data.nickname is not None:
+        nickname = data.nickname.strip()
+        if not nickname:
+            raise HTTPException(status_code=400, detail="Nickname cannot be empty")
+        current_user.nickname = nickname
+
+    if data.phone is not None:
+        phone = normalize_phone(data.phone) if data.phone else None
+        if phone and phone != current_user.phone:
+            existing_phone_user = session.exec(
+                select(User).where(User.phone == phone, User.id != current_user.id)
+            ).first()
+            if existing_phone_user:
+                raise HTTPException(status_code=400, detail="Phone number already registered")
+        current_user.phone = phone
+
+    if data.email is not None:
+        email = data.email.strip() or None
+        if email and email != current_user.email:
+            existing_email_user = session.exec(
+                select(User).where(User.email == email, User.id != current_user.id)
+            ).first()
+            if existing_email_user:
+                raise HTTPException(status_code=400, detail="Email already exists")
+        current_user.email = email
+
+    if data.avatar_url is not None:
+        current_user.avatar_url = data.avatar_url.strip() or None
+
+    if data.profile_background_url is not None:
+        current_user.profile_background_url = data.profile_background_url.strip() or None
+
+    if data.new_password:
+        if not data.current_password:
+            raise HTTPException(status_code=400, detail="Current password is required")
+        if not verify_password(data.current_password, current_user.password_hash):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        current_user.password_hash = hash_password(data.new_password)
+
+    current_user.updated_at = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    session.refresh(current_user)
+    return current_user
+
+
+def get_user_public_profile(session: Session, user_id: int, current_user: User | None = None):
+    user = session.get(User, user_id)
+    if not user or user.deleted_at is not None or user.status != UserStatus.active:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    published_notes = session.exec(
+        select(Note).where(
+            Note.user_id == user_id,
+            Note.deleted_at.is_(None),
+            Note.status == "published",
+            Note.is_private.is_(False),
+        )
+    ).all()
+    note_ids = [note.id for note in published_notes]
+    blocks = session.exec(
+        select(NoteBlock).where(NoteBlock.note_id.in_(note_ids))
+    ).all() if note_ids else []
+    block_ids = [block.id for block in blocks]
+    image_count = len(session.exec(
+        select(BlockMediaRelation).where(BlockMediaRelation.block_id.in_(block_ids))
+    ).all()) if block_ids else 0
+    follower_count = len(session.exec(
+        select(UserFollow).where(UserFollow.followee_id == user_id)
+    ).all())
+    is_following = False
+    if current_user and current_user.id != user_id:
+        is_following = session.exec(
+            select(UserFollow).where(
+                UserFollow.follower_id == current_user.id,
+                UserFollow.followee_id == user_id,
+            )
+        ).first() is not None
+
+    return {
+        "id": user.id,
+        "username": user.username,
+        "nickname": user.nickname,
+        "avatar_url": user.avatar_url,
+        "profile_background_url": user.profile_background_url,
+        "published_count": len(published_notes),
+        "image_count": image_count,
+        "follower_count": follower_count,
+        "is_following": is_following,
+    }
 
 
 def list_user_sessions(session: Session, current_user: User):

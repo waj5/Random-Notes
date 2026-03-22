@@ -14,4 +14,6 @@ def create_db_and_tables():
     with engine.begin() as connection:
         if "phone" not in user_columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(20)"))
+        if "profile_background_url" not in user_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN profile_background_url VARCHAR(500)"))
         connection.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_phone_unique ON users (phone)"))

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlmodel import Session
 
-from app.api.deps import get_current_session_id, get_current_user, get_session
+from app.api.deps import get_current_session_id, get_current_user, get_current_user_optional, get_session
 from app.core.config import (
     ACCESS_COOKIE_NAME,
     ACCESS_TOKEN_EXPIRE_MINUTES,
@@ -29,6 +29,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserDeleteResponse,
     UserLogin,
+    UserProfileUpdate,
     UserRegister,
 )
 from app.services.auth_services import (
@@ -41,6 +42,8 @@ from app.services.auth_services import (
     logout_user,
     refresh_user_token,
     register_user,
+    get_user_public_profile,
+    update_current_user,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -209,6 +212,26 @@ def me_api(
     current_user: User = Depends(get_current_user),
 ):
     user = current_user
+    return success_response(user)
+
+
+@router.put("/me")
+def update_me_api(
+    data: UserProfileUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    user = update_current_user(session, current_user, data)
+    return success_response(user, "Profile updated successfully")
+
+
+@router.get("/users/{user_id}/public")
+def get_user_public_profile_api(
+    user_id: int,
+    session: Session = Depends(get_session),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    user = get_user_public_profile(session, user_id, current_user)
     return success_response(user)
 
 

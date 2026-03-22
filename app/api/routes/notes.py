@@ -17,6 +17,7 @@ from app.services.note_services import (
     list_hot_notes,
     list_notes,
     list_public_notes,
+    list_user_public_notes,
     publish_note,
     unpublish_note,
     update_note,
@@ -91,6 +92,7 @@ def list_hot_notes_api(
 ):
     notes = list_hot_notes(
         session=session,
+        current_user=current_user,
         offset=offset,
         limit=limit,
     )
@@ -107,6 +109,24 @@ def list_following_notes_api(
     notes = list_following_notes(
         session=session,
         current_user=current_user,
+        offset=offset,
+        limit=limit,
+    )
+    return success_response(notes)
+
+
+@router.get("/public/user/{user_id}")
+def list_user_public_notes_api(
+    user_id: int,
+    offset: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    session: Session = Depends(get_session),
+    current_user: User | None = Depends(get_current_user_optional),
+):
+    notes = list_user_public_notes(
+        session=session,
+        current_user=current_user,
+        user_id=user_id,
         offset=offset,
         limit=limit,
     )
