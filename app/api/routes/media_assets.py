@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Request, UploadFile
 from sqlmodel import Session
 
 from app.api.deps import get_current_user, get_session
@@ -10,6 +10,7 @@ from app.services.media_asset_services import (
     delete_media_asset,
     get_media_asset,
     list_media_assets,
+    serve_signed_media,
     upload_image_and_create_media_asset,
 )
 
@@ -53,6 +54,46 @@ def get_media_asset_api(
 ):
     media = get_media_asset(session, current_user, media_id)
     return success_response(media)
+
+
+@router.get("/{media_id}/view")
+def view_media_asset_api(
+    media_id: int,
+    exp: int,
+    nonce: str,
+    wm: str,
+    sig: str,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.client.host if request.client else "unknown")
+    return serve_signed_media(session, media_id, exp, nonce, wm, sig, client_ip)
+
+
+@router.get("/{media_id}/download")
+def download_media_asset_api(
+    media_id: int,
+    exp: int,
+    nonce: str,
+    wm: str,
+    sig: str,
+    request: Request,
+    session: Session = Depends(get_session),
+):
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.client.host if request.client else "unknown")
+    return serve_signed_media(
+        session,
+        media_id,
+        exp,
+        nonce,
+        wm,
+        sig,
+        client_ip,
+        apply_watermark=True,
+        as_attachment=True,
+    )
 
 
 @router.delete("/{media_id}")

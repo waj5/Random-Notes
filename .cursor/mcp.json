@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "browser": {
+      "command": "node",
+      "args": [
+        "D:\\tools\\browser-mcp\\dist\\index.js",
+        "--port", "8787",
+        "--headless=false",
+        "--browser-type=system"
+      ],
+      "env": {},
+      "autoStart": true,
+      "url": "http://localhost:8787"
+    }
+  }
+}

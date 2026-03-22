@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -7,62 +7,163 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const isRegister = ref(false)
-const username = ref('')
+const useSmsLogin = ref(true)
+const account = ref('')
+const phone = ref('')
 const password = ref('')
+const smsCode = ref('')
 const nickname = ref('')
 const error = ref('')
+const message = ref('')
 const loading = ref(false)
+const rememberPassword = ref(false)
+const autoLogin = ref(true)
+const countdown = ref(0)
+let countdownTimer: number | null = null
 
-const title = computed(() => isRegister.value ? '注册账号' : '登录')
+const SAVED_LOGIN_KEY = 'savedLoginCredentials'
+const AUTO_LOGIN_KEY = 'autoLoginEnabled'
+
+const title = computed(() => isRegister.value ? '手机号注册' : (useSmsLogin.value ? '手机号验证码登录' : '账号密码登录'))
 const submitText = computed(() => isRegister.value ? '立即注册' : '登录')
 const switchText = computed(() => isRegister.value ? '已有账号？去登录' : '没有账号？去注册')
+const canSendCode = computed(() => /^1\d{10}$/.test(phone.value) && countdown.value === 0 && !loading.value)
+
+const startCountdown = () => {
+  countdown.value = 60
+  if (countdownTimer) {
+    window.clearInterval(countdownTimer)
+  }
+  countdownTimer = window.setInterval(() => {
+    countdown.value -= 1
+    if (countdown.value <= 0 && countdownTimer) {
+      window.clearInterval(countdownTimer)
+      countdownTimer = null
+    }
+  }, 1000)
+}
 
 const toggleMode = () => {
-  console.log('Toggling mode, current:', isRegister.value)
   isRegister.value = !isRegister.value
   error.value = ''
-  // Keep username if it exists, clear others
-  password.value = ''
+  message.value = ''
+  smsCode.value = ''
+  if (!rememberPassword.value) {
+    password.value = ''
+  }
   nickname.value = ''
+  if (isRegister.value && /^1\d{10}$/.test(account.value)) {
+    phone.value = account.value
+  }
+}
+
+const switchLoginMode = (smsMode: boolean) => {
+  useSmsLogin.value = smsMode
+  error.value = ''
+  message.value = ''
+  smsCode.value = ''
+}
+
+onMounted(() => {
+  autoLogin.value = localStorage.getItem(AUTO_LOGIN_KEY) !== 'false'
+  const saved = localStorage.getItem(SAVED_LOGIN_KEY)
+  if (!saved) return
+
+  try {
+    const parsed = JSON.parse(saved)
+    account.value = parsed.account || ''
+    password.value = parsed.password || ''
+    rememberPassword.value = !!parsed.rememberPassword
+  } catch {
+    localStorage.removeItem(SAVED_LOGIN_KEY)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (countdownTimer) {
+    window.clearInterval(countdownTimer)
+  }
+})
+
+const sendCode = async () => {
+  if (!canSendCode.value) return
+  error.value = ''
+  message.value = ''
+  try {
+    const result = await authStore.sendSmsCode({
+      phone: phone.value,
+      purpose: isRegister.value ? 'register' : 'login',
+    })
+    startCountdown()
+    message.value = result.preview_code ? `调试验证码：${result.preview_code}` : '验证码已发送'
+  } catch (err: any) {
+    error.value = err.response?.data?.detail || err.response?.data?.message || err.message || '发送验证码失败'
+  }
 }
 
 const handleSubmit = async () => {
-  if (!username.value || !password.value) {
-    error.value = '请输入账号和密码'
-    return
-  }
-
-  if (isRegister.value && !nickname.value) {
-    error.value = '请输入昵称'
-    return
+  if (isRegister.value) {
+    if (!phone.value || !smsCode.value || !nickname.value) {
+      error.value = '请输入手机号、验证码和昵称'
+      return
+    }
+  } else if (useSmsLogin.value) {
+    if (!phone.value || !smsCode.value) {
+      error.value = '请输入手机号和验证码'
+      return
+    }
+  } else {
+    if (!account.value || !password.value) {
+      error.value = '请输入账号和密码'
+      return
+    }
   }
   
   error.value = ''
+  message.value = ''
   loading.value = true
 
   try {
     if (isRegister.value) {
       await authStore.register({
-        username: username.value,
-        password: password.value,
-        nickname: nickname.value
+        phone: phone.value,
+        sms_code: smsCode.value,
+        nickname: nickname.value,
+        password: password.value || undefined,
       })
-      // 注册成功后自动登录或提示去登录
-      // 这里为了简单，注册成功后直接切换到登录模式，并填入用户名
       isRegister.value = false
-      password.value = '' // 清空密码
-      error.value = '注册成功，请登录' // 借用 error 显示成功消息，或者可以用 toast
-      // 实际上最好有一个 success 状态
+      useSmsLogin.value = true
+      account.value = phone.value
+      smsCode.value = ''
+      message.value = '注册成功，请登录'
     } else {
-      await authStore.login({
-        username: username.value,
-        password: password.value
-      })
+      if (useSmsLogin.value) {
+        await authStore.login({
+          phone: phone.value,
+          sms_code: smsCode.value,
+          auto_login: autoLogin.value,
+        })
+      } else {
+        await authStore.login({
+          account: account.value,
+          password: password.value,
+          auto_login: autoLogin.value,
+        })
+        if (rememberPassword.value) {
+          localStorage.setItem(SAVED_LOGIN_KEY, JSON.stringify({
+            account: account.value,
+            password: password.value,
+            rememberPassword: true,
+          }))
+        } else {
+          localStorage.removeItem(SAVED_LOGIN_KEY)
+        }
+      }
+      localStorage.setItem(AUTO_LOGIN_KEY, autoLogin.value ? 'true' : 'false')
       router.push('/')
     }
   } catch (err: any) {
-    // 处理错误消息
-    error.value = err.response?.data?.message || err.message || '操作失败'
+    error.value = err.response?.data?.detail || err.response?.data?.message || err.message || '操作失败'
   } finally {
     loading.value = false
   }
@@ -79,18 +180,73 @@ const handleSubmit = async () => {
       
       <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
         <div class="rounded-md shadow-sm space-y-4">
-          <div>
-            <label for="username" class="sr-only">账号</label>
+          <div v-if="!isRegister" class="grid grid-cols-2 gap-3 rounded-2xl bg-cyan-50 p-1">
+            <button
+              type="button"
+              @click="switchLoginMode(true)"
+              class="rounded-xl px-4 py-2 text-sm font-medium transition"
+              :class="useSmsLogin ? 'bg-white text-cyan-700 shadow-sm' : 'text-gray-500'"
+            >
+              验证码登录
+            </button>
+            <button
+              type="button"
+              @click="switchLoginMode(false)"
+              class="rounded-xl px-4 py-2 text-sm font-medium transition"
+              :class="!useSmsLogin ? 'bg-white text-cyan-700 shadow-sm' : 'text-gray-500'"
+            >
+              密码登录
+            </button>
+          </div>
+
+          <div v-if="!isRegister && !useSmsLogin">
+            <label for="account" class="sr-only">账号或手机号</label>
             <input
-              v-model="username"
-              id="username"
-              name="username"
+              v-model="account"
+              id="account"
+              name="account"
               type="text"
               autocomplete="username"
               required
               class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
-              placeholder="请输入账号"
+              placeholder="请输入账号或手机号"
             />
+          </div>
+
+          <div v-else>
+            <label for="phone" class="sr-only">手机号</label>
+            <input
+              v-model="phone"
+              id="phone"
+              name="phone"
+              type="tel"
+              inputmode="numeric"
+              maxlength="11"
+              autocomplete="tel"
+              required
+              class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
+              placeholder="请输入手机号"
+            />
+          </div>
+
+          <div v-if="isRegister || useSmsLogin" class="flex gap-3">
+            <input
+              v-model="smsCode"
+              type="text"
+              inputmode="numeric"
+              maxlength="6"
+              required
+              class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
+              placeholder="请输入验证码"
+            />
+            <button
+              type="button"
+              @click="sendCode"
+              :disabled="!canSendCode"
+              class="shrink-0 rounded-xl bg-cyan-100 px-4 text-sm font-medium text-cyan-700 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+            </button>
           </div>
 
           <div v-if="isRegister">
@@ -106,7 +262,7 @@ const handleSubmit = async () => {
             />
           </div>
 
-          <div>
+          <div v-if="!useSmsLogin || isRegister">
             <label for="password" class="sr-only">密码</label>
             <input
               v-model="password"
@@ -114,13 +270,33 @@ const handleSubmit = async () => {
               name="password"
               type="password"
               autocomplete="current-password"
-              required
+              :required="!useSmsLogin && !isRegister"
               class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
-              placeholder="请输入密码"
+              :placeholder="isRegister ? '设置密码（可选）' : '请输入密码'"
             />
           </div>
         </div>
 
+        <div v-if="!isRegister && !useSmsLogin" class="flex items-center justify-between text-sm text-gray-500">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              v-model="rememberPassword"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+            />
+            <span>记住密码</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              v-model="autoLogin"
+              type="checkbox"
+              class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+            />
+            <span>自动登录</span>
+          </label>
+        </div>
+
+        <div v-if="message" class="text-emerald-600 text-sm text-center font-medium">{{ message }}</div>
         <div v-if="error" class="text-red-500 text-sm text-center font-medium">{{ error }}</div>
 
         <div>

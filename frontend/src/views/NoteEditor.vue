@@ -122,7 +122,7 @@ const saveNote = async () => {
       await notesStore.addNote(note)
     }
     
-    router.push('/')
+    router.push('/mine')
   } catch (error) {
     console.error('Failed to save note:', error)
     alert('保存失败，请重试')

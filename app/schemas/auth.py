@@ -1,27 +1,38 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
 
 class UserRegister(BaseModel):
-    username: str
+    username: str | None = None
+    phone: str | None = None
+    sms_code: str | None = None
     nickname: str
     email: str | None = None
-    password: str
+    password: str | None = None
 
 
 class UserLogin(BaseModel):
-    username: str
-    password: str
+    account: str | None = None
+    phone: str | None = None
+    password: str | None = None
+    sms_code: str | None = None
+    auto_login: bool = False
 
 
 class RefreshTokenRequest(BaseModel):
-    refresh_token: str
+    refresh_token: str | None = None
+
+
+class SmsCodeSendRequest(BaseModel):
+    phone: str
+    purpose: Literal["register", "login"]
 
 
 class TokenResponse(BaseModel):
     access_token: str
-    refresh_token: str
+    refresh_token: str | None = None
     token_type: str = "bearer"
 
 

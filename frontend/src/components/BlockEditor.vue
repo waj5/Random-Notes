@@ -52,8 +52,9 @@ const updateContent = (content: string) => {
   emit('update', props.block.id, 'content', content)
 }
 
-const addImage = (src: string) => {
-  const newImages = [...props.block.images, src]
+const addImage = (src: string | string[]) => {
+  const imagesToAdd = Array.isArray(src) ? src : [src]
+  const newImages = [...props.block.images, ...imagesToAdd]
   emit('update', props.block.id, 'images', newImages)
 }
 
@@ -271,11 +272,11 @@ const heartTemplateHint = computed(() => {
             </button>
         </div>
         <div v-if="galleryTemplate !== 'heart'" :class="getGalleryUploaderClass()">
-          <ImageUploader @upload="(src) => addImage(src)" class="w-full h-full min-h-0" />
+          <ImageUploader multiple @upload="(src) => addImage(src)" class="w-full h-full min-h-0" />
         </div>
       </div>
       <div v-if="galleryTemplate === 'heart'" class="mx-auto max-w-[140px]">
-        <ImageUploader @upload="(src) => addImage(src)" class="aspect-square min-h-0" />
+        <ImageUploader multiple @upload="(src) => addImage(src)" class="aspect-square min-h-0" />
       </div>
       <textarea
         :value="block.content"

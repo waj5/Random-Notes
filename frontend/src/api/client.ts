@@ -1,8 +1,9 @@
 import axios from 'axios';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore } from '../stores/auth';
 
 const apiClient = axios.create({
   baseURL: '/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -25,11 +26,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const authStore = useAuthStore();
+    const requestUrl = error.config?.url || '';
+    const isLoginRequest = requestUrl.includes('/auth/login');
+    const isRefreshRequest = requestUrl.includes('/auth/refresh');
+    const isLogoutRequest = requestUrl.includes('/auth/logout');
     
     // Handle 401 Unauthorized
-    if (error.response && error.response.status === 401) {
+    if (error.response && error.response.status === 401 && !isLoginRequest && !isLogoutRequest) {
       // If we have a refresh token and haven't retried yet
-      if (authStore.refreshToken && !error.config._retry) {
+      if (!isRefreshRequest && !error.config._retry) {
         error.config._retry = true;
         try {
           // Try to refresh the token
@@ -37,13 +42,13 @@ apiClient.interceptors.response.use(
           // Retry the original request
           return apiClient(error.config);
         } catch (refreshError) {
-          // If refresh fails, logout
-          authStore.logout();
+          // If refresh fails, clear local auth only
+          authStore.clearAuthState();
           return Promise.reject(refreshError);
         }
       } else {
-        // No refresh token or already retried, logout
-        authStore.logout();
+        // No refresh token or already retried
+        authStore.clearAuthState();
       }
     }
     return Promise.reject(error);

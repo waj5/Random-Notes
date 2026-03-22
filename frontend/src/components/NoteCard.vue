@@ -1,11 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Trash2 } from 'lucide-vue-next'
-import { useNotesStore, Note } from '../stores/notes'
+import { CalendarDays, Images, MessageCircle, Trash2 } from 'lucide-vue-next'
+import { useNotesStore } from '../stores/notes'
+import type { Note } from '../stores/notes'
+import { useAuthStore } from '../stores/auth'
 
-const props = defineProps<{ note: Note }>()
+const props = withDefaults(defineProps<{
+  note: Note
+  showDelete?: boolean
+  variant?: 'masonry' | 'feed'
+}>(), {
+  showDelete: false,
+  variant: 'masonry'
+})
 const notesStore = useNotesStore()
+const authStore = useAuthStore()
 const router = useRouter()
 
 // Random rotation for "messy" look (-2 to 2 degrees)
@@ -51,16 +61,119 @@ const cardType = computed(() => {
   return 'gallery'
 })
 
+const authorLabel = computed(() => props.note.authorNickname || props.note.authorUsername || `用户 ${props.note.userId || ''}`.trim())
+const isOwner = computed(() => props.note.userId === authStore.user?.id)
+const isFollowing = computed(() => !!props.note.userId && authStore.followingIds.includes(props.note.userId))
+
+const feedImages = computed(() => allImages.value.slice(0, 6))
+
+const feedGridClass = computed(() => {
+  if (feedImages.value.length <= 1) return 'grid-cols-1'
+  if (feedImages.value.length === 2) return 'grid-cols-2'
+  return 'grid-cols-3'
+})
+
+const hotCommentLabel = computed(() => {
+  if (!props.note.hotComment?.content) return ''
+  const author = props.note.hotComment.nickname || props.note.hotComment.username || '热评'
+  return `${author}: ${props.note.hotComment.content}`
+})
+
 const deleteNote = (e: Event) => {
   e.stopPropagation()
   if (confirm('确定要删除这条随想吗？')) {
     notesStore.deleteNote(props.note.id)
   }
 }
+
+const toggleFollow = async (e: Event) => {
+  e.stopPropagation()
+  if (!props.note.userId || isOwner.value) return
+
+  if (isFollowing.value) {
+    await authStore.unfollowUser(props.note.userId)
+    notesStore.followingNotes = notesStore.followingNotes.filter(note => note.userId !== props.note.userId)
+    return
+  }
+
+  await authStore.followUser(props.note.userId)
+}
 </script>
 
 <template>
-  <div 
+  <div
+    v-if="props.variant === 'feed'"
+    @click="router.push(`/note/${note.id}`)"
+    class="w-full cursor-pointer"
+  >
+    <article class="rounded-3xl border border-sky-100 bg-white/92 shadow-[0_14px_36px_rgba(54,120,160,0.08)] backdrop-blur">
+      <div class="flex items-start gap-3 p-5 pb-4">
+        <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-cyan-300 text-sm font-bold text-white">
+          {{ (authorLabel || 'U').slice(-1) }}
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2">
+            <span class="truncate text-sm font-semibold text-slate-800">{{ authorLabel }}</span>
+            <span class="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-600">公开动态</span>
+          </div>
+          <div class="mt-1 text-xs text-slate-400">
+            {{ new Date(note.createdAt).toLocaleString() }}
+          </div>
+        </div>
+        <button
+          v-if="!isOwner"
+          @click="toggleFollow"
+          class="rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+          :class="isFollowing ? 'bg-slate-100 text-slate-600 hover:bg-slate-200' : 'bg-sky-500 text-white hover:bg-sky-600'"
+        >
+          {{ isFollowing ? '已关注' : '关注' }}
+        </button>
+      </div>
+
+      <div class="px-5 pb-4">
+        <h3 v-if="note.title && note.title !== '无题'" class="mb-2 text-lg font-semibold leading-7 text-slate-900">
+          {{ note.title }}
+        </h3>
+        <p v-if="previewText" class="mb-4 whitespace-pre-wrap text-[15px] leading-7 text-slate-700">
+          {{ previewText }}
+        </p>
+
+        <div v-if="feedImages.length > 0" class="grid gap-2" :class="feedGridClass">
+          <div
+            v-for="(img, idx) in feedImages"
+            :key="idx"
+            class="overflow-hidden rounded-2xl bg-slate-100"
+            :class="feedImages.length === 1 ? 'aspect-[4/3] max-w-[520px]' : 'aspect-square'"
+          >
+            <img :src="img" class="h-full w-full object-cover transition-transform duration-500 hover:scale-105" loading="lazy" @contextmenu.prevent @dragstart.prevent />
+          </div>
+        </div>
+
+        <div v-if="hotCommentLabel" class="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+          <span class="mr-2 inline-flex rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-500">热门评论</span>
+          <span class="line-clamp-2">{{ hotCommentLabel }}</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-6 border-t border-slate-100 px-5 py-3 text-sm text-slate-400">
+        <div class="flex items-center gap-1.5">
+          <CalendarDays :size="16" />
+          <span>{{ new Date(note.createdAt).toLocaleDateString() }}</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <Images :size="16" />
+          <span>{{ allImages.length }}</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <MessageCircle :size="16" />
+          <span>{{ props.note.commentCount || 0 }}</span>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div
+    v-else
     @click="router.push(`/note/${note.id}`)"
     class="break-inside-avoid mb-10 w-full inline-block"
   >
@@ -94,7 +207,7 @@ const deleteNote = (e: Event) => {
       <!-- Single Image (Polaroid Style) -->
       <div v-else-if="cardType === 'image'" class="flex flex-col gap-3">
         <div class="aspect-[4/3] w-full overflow-hidden bg-gray-100 shadow-inner p-1 bg-white border border-gray-100">
-          <img :src="allImages[0]" class="w-full h-full object-cover filter contrast-[1.05] hover:scale-105 transition-transform duration-700" loading="lazy" />
+          <img :src="allImages[0]" class="w-full h-full object-cover filter contrast-[1.05] hover:scale-105 transition-transform duration-700" loading="lazy" @contextmenu.prevent @dragstart.prevent />
         </div>
         <div class="px-2 pt-1">
           <h3 v-if="note.title && note.title !== '无题'" class="text-lg font-bold text-gray-800 mb-1 font-handwriting">{{ note.title }}</h3>
@@ -109,7 +222,7 @@ const deleteNote = (e: Event) => {
           <div v-for="(img, idx) in allImages.slice(0, 4)" :key="idx" 
                class="aspect-square overflow-hidden bg-gray-100 shadow-sm border-[3px] border-white relative first:rotate-[-2deg] last:rotate-[2deg]"
                :class="{'col-span-2 aspect-[2/1]': idx === 0 && allImages.length === 3}">
-             <img :src="img" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500" loading="lazy" />
+             <img :src="img" class="w-full h-full object-cover hover:scale-110 transition-transform duration-500" loading="lazy" @contextmenu.prevent @dragstart.prevent />
           </div>
         </div>
         <div class="px-2 pt-1">
@@ -121,6 +234,7 @@ const deleteNote = (e: Event) => {
 
     <!-- Delete Button -->
     <button 
+      v-if="props.showDelete"
       @click="deleteNote"
       class="absolute -top-2 -right-2 p-2 text-gray-400 hover:text-red-500 bg-white shadow-md rounded-full opacity-0 group-hover:opacity-100 transition-all scale-75 hover:scale-100 z-30"
     >

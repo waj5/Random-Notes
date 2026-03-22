@@ -2,6 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import Login from '../views/Login.vue'
 import Home from '../views/Home.vue'
+import Dynamic from '../views/Dynamic.vue'
+import MyNotes from '../views/MyNotes.vue'
+import AlbumDetail from '../views/AlbumDetail.vue'
 import NoteEditor from '../views/NoteEditor.vue'
 import NoteDetail from '../views/NoteDetail.vue'
 
@@ -26,6 +29,24 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/dynamic',
+      name: 'dynamic',
+      component: Dynamic,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/mine',
+      name: 'mine',
+      component: MyNotes,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/album/:id',
+      name: 'album-detail',
+      component: AlbumDetail,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/edit/:id',
       name: 'edit',
       component: NoteEditor,
@@ -34,14 +55,16 @@ const router = createRouter({
     {
       path: '/note/:id',
       name: 'note-detail',
-      component: NoteDetail,
-      meta: { requiresAuth: true }
+      component: NoteDetail
     }
   ]
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
+  if (!authStore.initialized) {
+    await authStore.initialize()
+  }
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
   } else {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Compass, Flame, Plus, Sparkles } from 'lucide-vue-next'
+import { BellRing, Plus, Sparkles, UserPlus } from 'lucide-vue-next'
 import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
@@ -10,15 +10,14 @@ const router = useRouter()
 const notesStore = useNotesStore()
 const authStore = useAuthStore()
 
-const notes = computed(() => notesStore.publicNotes)
-const trendingNotes = computed(() => notesStore.hotNotes.slice(0, 8))
+const notes = computed(() => notesStore.followingNotes)
+const followingCount = computed(() => authStore.followingIds.length)
 const featuredNote = computed(() => notes.value[0])
 
 onMounted(async () => {
   await Promise.all([
     authStore.fetchFollowingIds(),
-    notesStore.fetchPublicNotes(),
-    notesStore.fetchHotNotes()
+    notesStore.fetchFollowingNotes(),
   ])
 })
 </script>
@@ -30,8 +29,8 @@ onMounted(async () => {
         <div class="flex items-center gap-8">
           <button class="text-2xl font-black tracking-tight text-sky-500">随心记</button>
           <nav class="hidden items-center gap-6 text-sm text-slate-600 md:flex">
-            <button class="font-semibold text-slate-900">首页</button>
-            <button @click="router.push('/dynamic')" class="hover:text-sky-500">动态</button>
+            <button @click="router.push('/')" class="hover:text-sky-500">首页</button>
+            <button class="font-semibold text-slate-900">动态</button>
             <button @click="router.push('/mine')" class="hover:text-sky-500">我的</button>
           </nav>
         </div>
@@ -59,21 +58,21 @@ onMounted(async () => {
         <section class="overflow-hidden rounded-3xl border border-white/60 bg-white/70 shadow-[0_18px_40px_rgba(74,144,164,0.10)] backdrop-blur">
           <div class="bg-gradient-to-br from-sky-300 via-cyan-200 to-white px-5 py-6">
             <div class="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/85 text-sky-500 shadow-sm">
-              <Compass :size="26" />
+              <BellRing :size="26" />
             </div>
-            <h2 class="text-lg font-bold text-slate-800">动态广场</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">首页现在按你的关注和内容偏好做推荐，同时保留全站热门榜单。</p>
+            <h2 class="text-lg font-bold text-slate-800">关注动态</h2>
+            <p class="mt-2 text-sm leading-6 text-slate-600">这里只显示你关注的人发布的公开内容。</p>
           </div>
           <div class="space-y-3 p-4">
-            <button class="flex w-full items-center justify-between rounded-2xl bg-sky-50 px-4 py-3 text-left text-sm font-medium text-sky-600">
-              <span>个性推荐</span>
-              <Sparkles :size="16" />
-            </button>
+            <div class="flex items-center justify-between rounded-2xl bg-sky-50 px-4 py-3 text-sm font-medium text-sky-600">
+              <span>已关注用户</span>
+              <span>{{ followingCount }}</span>
+            </div>
             <button
-              @click="router.push('/dynamic')"
+              @click="router.push('/')"
               class="flex w-full items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
             >
-              <span>进入关注动态</span>
+              <span>去首页发现更多</span>
               <span>></span>
             </button>
           </div>
@@ -81,14 +80,14 @@ onMounted(async () => {
 
         <section v-if="featuredNote" class="rounded-3xl border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
           <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
-            <Flame :size="16" class="text-orange-500" />
-            <span>精选动态</span>
+            <Sparkles :size="16" class="text-sky-500" />
+            <span>最新关注动态</span>
           </div>
           <h3 class="line-clamp-2 text-base font-semibold leading-7 text-slate-900">
             {{ featuredNote.title || '无题动态' }}
           </h3>
           <p class="mt-2 line-clamp-3 text-sm leading-6 text-slate-500">
-            {{ featuredNote.summary || '刚刚发布了一条新的公开动态。' }}
+            {{ featuredNote.summary || '你关注的人刚刚发布了新内容。' }}
           </p>
         </section>
       </aside>
@@ -96,8 +95,8 @@ onMounted(async () => {
       <main class="space-y-4">
         <div class="rounded-3xl border border-white/60 bg-white/82 px-5 py-4 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
           <div class="flex items-center gap-3">
-            <button class="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white">全部</button>
-            <button @click="router.push('/dynamic')" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">关注动态</button>
+            <button class="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white">关注中</button>
+            <button @click="router.push('/')" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">去首页发现</button>
           </div>
         </div>
 
@@ -107,42 +106,23 @@ onMounted(async () => {
 
         <div v-else class="rounded-3xl border border-white/60 bg-white/82 px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
           <div class="mb-6 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-50 text-sky-400">
-            <Plus :size="40" stroke-width="2" />
+            <UserPlus :size="40" stroke-width="2" />
           </div>
-          <p class="mb-2 text-xl font-bold text-gray-800">还没有公开动态</p>
-          <p class="text-sm text-gray-500">发布后，这里会像信息流一样连续展示</p>
+          <p class="mb-2 text-xl font-bold text-gray-800">你的动态还是空的</p>
+          <p class="text-sm text-gray-500">先去首页关注一些人，这里才会出现内容</p>
         </div>
       </main>
 
       <aside class="space-y-4 lg:sticky lg:top-24 lg:h-fit">
         <section class="rounded-3xl border border-white/60 bg-white/82 p-4 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
           <div class="mb-3 flex items-center justify-between">
-            <h2 class="text-base font-bold text-slate-800">热门动态</h2>
-            <span class="text-xs text-slate-400">实时</span>
+            <h2 class="text-base font-bold text-slate-800">关注建议</h2>
+            <span class="text-xs text-slate-400">基于首页</span>
           </div>
-          <div v-if="trendingNotes.length > 0" class="space-y-3">
-            <button
-              v-for="(note, index) in trendingNotes"
-              :key="note.id"
-              @click="router.push(`/note/${note.id}`)"
-              class="flex w-full gap-3 rounded-2xl px-2 py-2 text-left transition-colors hover:bg-sky-50"
-            >
-              <span class="w-5 shrink-0 text-sm font-bold text-orange-500">{{ index + 1 }}</span>
-              <span class="line-clamp-2 flex-1 text-sm leading-6 text-slate-600">
-                {{ note.title || note.summary || '无题动态' }}
-              </span>
-            </button>
-          </div>
-          <p v-else class="text-sm leading-6 text-slate-400">暂时还没有可展示的热门动态</p>
-        </section>
-
-        <section class="rounded-3xl border border-white/60 bg-white/82 p-4 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
-          <h2 class="mb-3 text-base font-bold text-slate-800">创作提示</h2>
           <ul class="space-y-2 text-sm leading-6 text-slate-500">
-            <li>标题尽量简短，像动态一样更好刷。</li>
-            <li>多图内容会自动按信息流样式展示。</li>
-            <li>在这里关注作者后，动态页会只显示关注流。</li>
-            <li>热门榜单会综合新鲜度、内容质量和作者热度。</li>
+            <li>在首页卡片右上角可以直接关注作者。</li>
+            <li>取消关注后，这里的内容会立即消失。</li>
+            <li>这里只展示已发布且公开的内容。</li>
           </ul>
         </section>
       </aside>

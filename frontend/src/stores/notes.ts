@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import apiClient from '@/api/client'
+import apiClient from '../api/client'
 
 export type LayoutType = 
   | 'text-only'       // 纯文字
@@ -27,21 +27,65 @@ export interface NoteBlock {
 
 export interface Note {
   id: string;
+  userId?: number;
+  authorUsername?: string;
+  authorNickname?: string;
+  authorAvatarUrl?: string;
+  commentCount?: number;
+  hotComment?: {
+    id: number;
+    user_id: number;
+    nickname: string;
+    username: string;
+    content: string;
+    created_at: string;
+  } | null;
   title: string;
   summary?: string;
   createdAt: number;
+  status?: string;
+  isPrivate?: boolean;
   blocks: NoteBlock[]; // 笔记由多个块组成
   theme: 'book-classic' | 'modern-dark'; // 支持“像书一样”的主题
 }
 
 export const useNotesStore = defineStore('notes', {
   state: () => ({
-    notes: [] as Note[],
+    myNotes: [] as Note[],
+    publicNotes: [] as Note[],
+    followingNotes: [] as Note[],
+    hotNotes: [] as Note[],
     loading: false,
     error: null as string | null,
   }),
   actions: {
-    async fetchNotes() {
+    mapNoteSummary(n: any): Note {
+      return {
+        id: n.id.toString(),
+        userId: n.user_id,
+        authorUsername: n.author_username,
+        authorNickname: n.author_nickname,
+        authorAvatarUrl: n.author_avatar_url,
+        commentCount: n.comment_count || 0,
+        hotComment: n.hot_comment || null,
+        title: n.title,
+        summary: n.summary,
+        createdAt: new Date(n.created_at).getTime(),
+        theme: n.book_theme || 'book-classic',
+        status: n.status,
+        isPrivate: n.is_private,
+        blocks: n.blocks ? n.blocks.map((b: any) => ({
+          id: b.id.toString(),
+          type: 'text-only',
+          content: b.text_content || '',
+          images: b.media_assets ? b.media_assets.map((m: any) => m.file_url) : [],
+          mediaIds: b.media_assets ? b.media_assets.map((m: any) => m.id) : [],
+          galleryTemplate: this.parseGalleryTemplate(b.caption),
+        })) : [],
+      }
+    },
+
+    async fetchMyNotes() {
       this.loading = true;
       try {
         const response = await apiClient.get('/notes/', {
@@ -50,29 +94,58 @@ export const useNotesStore = defineStore('notes', {
           }
         });
         
-        // 我们需要把后端返回的 Note 结构转换成前端使用的结构
-        // 关键点：列表接口可能没有返回完整的 blocks 结构，或者返回了 media_assets
-        // 查看后端代码 app/api/routes/notes.py 的 list_notes 接口返回的是 NoteRead
-        // NoteRead 包含 blocks (List[BlockRead])。
-        // BlockRead 包含 media_assets (List[MediaAssetRead])
-        
-        this.notes = response.data.data.items.map((n: any) => ({
-          id: n.id.toString(),
-          title: n.title,
-          summary: n.summary,
-          createdAt: new Date(n.created_at).getTime(),
-          theme: n.book_theme || 'book-classic',
-          // 列表页也需要构建 blocks，以便 NoteCard 能提取图片
-          blocks: n.blocks ? n.blocks.map((b: any) => ({
-            id: b.id.toString(),
-            // 简单映射一下类型，列表页主要为了取图片，类型不完全准确也没关系
-            type: 'text-only', 
-            content: b.text_content || '',
-            images: b.media_assets ? b.media_assets.map((m: any) => m.file_url) : [],
-            mediaIds: b.media_assets ? b.media_assets.map((m: any) => m.id) : [],
-            galleryTemplate: this.parseGalleryTemplate(b.caption),
-          })) : [],
-        }));
+        this.myNotes = response.data.data.items.map((n: any) => this.mapNoteSummary(n));
+      } catch (err: any) {
+        this.error = err.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchPublicNotes() {
+      this.loading = true;
+      try {
+        const response = await apiClient.get('/notes/public', {
+          params: {
+            limit: 100
+          }
+        });
+
+        this.publicNotes = response.data.data.items.map((n: any) => this.mapNoteSummary(n));
+      } catch (err: any) {
+        this.error = err.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchFollowingNotes() {
+      this.loading = true;
+      try {
+        const response = await apiClient.get('/notes/following', {
+          params: {
+            limit: 100
+          }
+        });
+
+        this.followingNotes = response.data.data.items.map((n: any) => this.mapNoteSummary(n));
+      } catch (err: any) {
+        this.error = err.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async fetchHotNotes() {
+      this.loading = true;
+      try {
+        const response = await apiClient.get('/notes/hot', {
+          params: {
+            limit: 10
+          }
+        });
+
+        this.hotNotes = response.data.data.items.map((n: any) => this.mapNoteSummary(n));
       } catch (err: any) {
         this.error = err.message;
       } finally {
@@ -87,9 +160,17 @@ export const useNotesStore = defineStore('notes', {
         
         const note: Note = {
           id: data.id.toString(),
+          userId: data.user_id,
+          authorUsername: data.author_username,
+          authorNickname: data.author_nickname,
+          authorAvatarUrl: data.author_avatar_url,
+          commentCount: data.comment_count || 0,
+          hotComment: data.hot_comment || null,
           title: data.title,
           createdAt: new Date(data.created_at).getTime(),
           theme: data.book_theme || 'book-classic',
+          status: data.status,
+          isPrivate: data.is_private,
           blocks: data.blocks.map((b: any) => {
             // Map backend types back to frontend layout types
             let type: LayoutType = 'text-only';
@@ -118,11 +199,31 @@ export const useNotesStore = defineStore('notes', {
           }),
         };
 
-        const index = this.notes.findIndex(n => n.id === id);
-        if (index !== -1) {
-          this.notes[index] = note;
-        } else {
-          this.notes.push(note);
+        const myIndex = this.myNotes.findIndex(n => n.id === id);
+        if (myIndex !== -1) {
+          this.myNotes[myIndex] = note;
+        } else if (note.isPrivate || note.status !== 'published') {
+          this.myNotes.push(note);
+        }
+
+        const publicIndex = this.publicNotes.findIndex(n => n.id === id);
+        if (publicIndex !== -1) {
+          if (note.status === 'published' && note.isPrivate === false) {
+            this.publicNotes[publicIndex] = note;
+          } else {
+            this.publicNotes.splice(publicIndex, 1);
+          }
+        } else if (note.status === 'published' && note.isPrivate === false) {
+          this.publicNotes.push(note);
+        }
+
+        const followingIndex = this.followingNotes.findIndex(n => n.id === id);
+        if (followingIndex !== -1) {
+          if (note.status === 'published' && note.isPrivate === false) {
+            this.followingNotes[followingIndex] = note;
+          } else {
+            this.followingNotes.splice(followingIndex, 1);
+          }
         }
         
         return note;
@@ -195,7 +296,7 @@ export const useNotesStore = defineStore('notes', {
             });
         }
 
-        await this.fetchNotes();
+        await Promise.all([this.fetchMyNotes(), this.fetchPublicNotes(), this.fetchFollowingNotes(), this.fetchHotNotes()]);
         return newNoteId.toString();
       } catch (err: any) {
         this.error = err.message;
@@ -206,7 +307,7 @@ export const useNotesStore = defineStore('notes', {
     async publishNote(id: string) {
       try {
         await apiClient.post(`/notes/${id}/publish`);
-        await this.fetchNotes();
+        await Promise.all([this.fetchMyNotes(), this.fetchPublicNotes(), this.fetchFollowingNotes(), this.fetchHotNotes()]);
       } catch (err: any) {
         this.error = err.message;
         throw err;
@@ -253,6 +354,7 @@ export const useNotesStore = defineStore('notes', {
         
         // Refresh local
         await this.getNoteById(id);
+        await Promise.all([this.fetchMyNotes(), this.fetchPublicNotes(), this.fetchFollowingNotes(), this.fetchHotNotes()]);
       } catch (err: any) {
         this.error = err.message;
         throw err;
@@ -353,7 +455,10 @@ export const useNotesStore = defineStore('notes', {
     async deleteNote(id: string) {
       try {
         await apiClient.delete(`/notes/${id}`);
-        this.notes = this.notes.filter(n => n.id !== id);
+        this.myNotes = this.myNotes.filter(n => n.id !== id);
+        this.publicNotes = this.publicNotes.filter(n => n.id !== id);
+        this.followingNotes = this.followingNotes.filter(n => n.id !== id);
+        this.hotNotes = this.hotNotes.filter(n => n.id !== id);
       } catch (err: any) {
         this.error = err.message;
         throw err;
