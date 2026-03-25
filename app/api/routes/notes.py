@@ -69,7 +69,7 @@ def list_public_notes_api(
     mood: str | None = Query(None),
     scene: str | None = Query(None),
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
     notes = list_public_notes(
         session=session,
@@ -88,7 +88,7 @@ def list_hot_notes_api(
     offset: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
     notes = list_hot_notes(
         session=session,

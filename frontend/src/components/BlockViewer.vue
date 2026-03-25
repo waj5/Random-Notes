@@ -6,8 +6,14 @@ defineProps<{ block: NoteBlock }>()
 
 const previewImage = ref('')
 
+const getOriginalUrl = (image: string) => (
+  image.includes('/view?')
+    ? image.replace('/view?', '/view?mode=original&')
+    : image
+)
+
 const openPreview = (image: string) => {
-  previewImage.value = image
+  previewImage.value = getOriginalUrl(image)
 }
 
 const closePreview = () => {
@@ -79,51 +85,51 @@ const getHeartGridStyle = (block: NoteBlock) => {
 <template>
   <div class="mb-8">
     <!-- Text Only -->
-    <div v-if="block.type === 'text-only'" class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap break-words">
+    <div v-if="block.type === 'text-only'" class="lined-paper prose prose-lg max-w-none whitespace-pre-wrap break-words text-gray-800 font-serif">
       {{ block.content }}
     </div>
 
     <!-- Image Top -->
     <div v-else-if="block.type === 'image-top'" class="space-y-6">
       <div v-if="block.images.length > 0" class="inline-flex max-w-full overflow-hidden rounded-xl shadow-md">
-        <img :src="block.images[0]" :class="`${inlineImageClass} transform hover:scale-105 transition-transform duration-700`" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
+        <img :src="block.images[0]" :class="`${inlineImageClass} transform hover:scale-105 transition-transform duration-700`" loading="lazy" decoding="async" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
       </div>
-      <div v-if="block.content" class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap">
+      <div v-if="block.content" class="lined-paper prose prose-lg max-w-none whitespace-pre-wrap text-gray-800 font-serif">
         {{ block.content }}
       </div>
     </div>
 
     <!-- Image Bottom -->
     <div v-else-if="block.type === 'image-bottom'" class="space-y-6">
-      <div v-if="block.content" class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap">
+      <div v-if="block.content" class="lined-paper prose prose-lg max-w-none whitespace-pre-wrap text-gray-800 font-serif">
         {{ block.content }}
       </div>
       <div v-if="block.images.length > 0" class="inline-flex max-w-full overflow-hidden rounded-xl shadow-md">
-        <img :src="block.images[0]" :class="`${inlineImageClass} transform hover:scale-105 transition-transform duration-700`" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
+        <img :src="block.images[0]" :class="`${inlineImageClass} transform hover:scale-105 transition-transform duration-700`" loading="lazy" decoding="async" @click="block.images[0] && openPreview(block.images[0])" @contextmenu.prevent @dragstart.prevent />
       </div>
     </div>
 
     <!-- Split Left -->
-    <div v-else-if="block.type === 'split-left'" class="mb-2 flex items-start gap-6">
-      <div class="relative z-10 flex max-w-[45%] shrink-0 flex-col space-y-4">
+    <div v-else-if="block.type === 'split-left'" class="mb-2 overflow-hidden">
+      <div class="relative z-10 float-left mb-4 mr-6 flex max-w-[45%] flex-col space-y-4">
         <div v-for="(img, idx) in block.images" :key="idx" class="inline-block max-w-full overflow-hidden rounded-xl shadow-md rotate-1 hover:rotate-0 transition-transform duration-300 bg-white p-2 pb-8">
-           <img :src="img" class="block h-auto w-auto max-w-full max-h-[320px] object-contain rounded-lg cursor-zoom-in" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
+           <img :src="img" class="block h-auto w-auto max-w-full max-h-[320px] object-contain rounded-lg cursor-zoom-in" loading="lazy" decoding="async" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
         </div>
       </div>
-      <div class="min-w-0 flex-1 prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap break-words">
+      <div class="lined-paper prose prose-lg max-w-none whitespace-pre-wrap break-words text-gray-800 font-serif">
         {{ block.content }}
       </div>
     </div>
 
     <!-- Split Right -->
-    <div v-else-if="block.type === 'split-right'" class="mb-2 flex items-start gap-6">
-      <div class="min-w-0 flex-1 prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap break-words">
-        {{ block.content }}
-      </div>
-      <div class="relative z-10 flex max-w-[45%] shrink-0 flex-col space-y-4">
+    <div v-else-if="block.type === 'split-right'" class="mb-2 overflow-hidden">
+      <div class="relative z-10 float-right mb-4 ml-6 flex max-w-[45%] flex-col space-y-4">
         <div v-for="(img, idx) in block.images" :key="idx" class="inline-block max-w-full overflow-hidden rounded-xl shadow-md -rotate-1 hover:rotate-0 transition-transform duration-300 bg-white p-2 pb-8">
-           <img :src="img" class="block h-auto w-auto max-w-full max-h-[320px] object-contain rounded-lg cursor-zoom-in" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
+           <img :src="img" class="block h-auto w-auto max-w-full max-h-[320px] object-contain rounded-lg cursor-zoom-in" loading="lazy" decoding="async" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
         </div>
+      </div>
+      <div class="lined-paper prose prose-lg max-w-none whitespace-pre-wrap break-words text-gray-800 font-serif">
+        {{ block.content }}
       </div>
     </div>
 
@@ -131,10 +137,10 @@ const getHeartGridStyle = (block: NoteBlock) => {
     <div v-else-if="block.type === 'gallery-grid'" class="space-y-6">
       <div :class="getGalleryContainerClass(block)" :style="getGalleryTemplate(block) === 'heart' ? getHeartGridStyle(block) : undefined">
         <div v-for="(img, idx) in block.images" :key="idx" :class="getGalleryItemClass(block, idx)">
-            <img :src="img" :class="getGalleryImageClass(block)" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
+            <img :src="img" :class="getGalleryImageClass(block)" loading="lazy" decoding="async" @click="openPreview(img)" @contextmenu.prevent @dragstart.prevent />
         </div>
       </div>
-      <div v-if="block.content" class="prose prose-lg max-w-none text-gray-800 font-serif leading-relaxed whitespace-pre-wrap text-center italic text-gray-600">
+      <div v-if="block.content" class="lined-paper prose prose-lg max-w-none whitespace-pre-wrap text-center italic text-gray-600 font-serif">
         {{ block.content }}
       </div>
     </div>
@@ -161,6 +167,16 @@ const getHeartGridStyle = (block: NoteBlock) => {
 </template>
 
 <style scoped>
+.lined-paper {
+  line-height: 2.4rem;
+  padding: 0.15rem 0 0.25rem;
+  background: transparent;
+}
+
+.lined-paper :deep(p) {
+  margin: 0;
+}
+
 .heart-gallery {
   clip-path: polygon(50% 100%, 31% 87%, 14% 70%, 5% 51%, 7% 29%, 18% 13%, 34% 7%, 50% 16%, 66% 7%, 82% 13%, 93% 29%, 95% 51%, 86% 70%, 69% 87%);
 }

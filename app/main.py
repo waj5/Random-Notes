@@ -11,6 +11,7 @@ from app.api.routes.media_assets import router as media_assets_router
 from app.api.routes.note_blocks import router as note_blocks_router
 from app.api.routes.note_comments import router as note_comments_router
 from app.api.routes.notes import router as notes_router
+from app.api.routes.note_shares import router as note_shares_router
 from app.core.config import CORS_ALLOWED_ORIGINS, ENFORCE_HTTPS, IMAGE_UPLOAD_DIR, UPLOAD_DIR
 from app.core.exception_handlers import register_exception_handlers
 from app.core.http_security import SecurityHeadersMiddleware
@@ -45,6 +46,7 @@ register_exception_handlers(app)
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(notes_router, prefix="/api")
+app.include_router(note_shares_router, prefix="/api")
 app.include_router(note_comments_router, prefix="/api")
 app.include_router(follows_router, prefix="/api")
 app.include_router(note_blocks_router, prefix="/api")

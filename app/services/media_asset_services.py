@@ -143,6 +143,32 @@ def _apply_watermark(content: bytes, mime_type: str, watermark_text: str):
     return output
 
 
+def _optimize_inline_image(content: bytes, mime_type: str):
+    try:
+        image = Image.open(BytesIO(content))
+    except Exception:
+        return BytesIO(content), mime_type
+
+    max_edge = 1600
+    if max(image.size) > max_edge:
+        image.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+
+    output = BytesIO()
+    if mime_type == "image/png":
+        image.save(output, format="PNG", optimize=True)
+        output.seek(0)
+        return output, mime_type
+    if mime_type == "image/webp":
+        image.save(output, format="WEBP", quality=82, method=6)
+        output.seek(0)
+        return output, mime_type
+
+    image = image.convert("RGB")
+    image.save(output, format="JPEG", quality=84, optimize=True)
+    output.seek(0)
+    return output, "image/jpeg"
+
+
 def _get_download_watermark_text(session: Session, media: MediaAsset):
     author = session.get(User, media.user_id)
     if author:
@@ -158,6 +184,7 @@ def serve_signed_media(
     watermark_text: str,
     signature: str,
     client_identity: str,
+    render_mode: str = "inline",
     apply_watermark: bool = False,
     as_attachment: bool = False,
 ):
@@ -182,16 +209,22 @@ def serve_signed_media(
     content = _load_media_content(media)
     if apply_watermark:
         output = _apply_watermark(content, media.mime_type, _get_download_watermark_text(session, media))
+        response_media_type = media.mime_type
+    elif render_mode == "inline" and media.mime_type.startswith("image/"):
+        output, response_media_type = _optimize_inline_image(content, media.mime_type)
     else:
         output = BytesIO(content)
+        response_media_type = media.mime_type
     output.seek(0)
     download_name = media.file_name or "image"
+    remaining_seconds = max(expires_at - int(datetime.utcnow().timestamp()), 0)
+    cache_control = "private, no-store, max-age=0" if apply_watermark or as_attachment else f"private, max-age={remaining_seconds}, immutable"
     headers = {
-        "Cache-Control": "private, no-store, max-age=0",
+        "Cache-Control": cache_control,
         "Content-Disposition": f'{"attachment" if as_attachment else "inline"}; filename="{download_name}"',
         "X-Robots-Tag": "noindex, noimageindex",
     }
-    return StreamingResponse(output, media_type=media.mime_type, headers=headers)
+    return StreamingResponse(output, media_type=response_media_type, headers=headers)
 
 
 def create_media_asset(session: Session, current_user: User, data: MediaAssetCreate):

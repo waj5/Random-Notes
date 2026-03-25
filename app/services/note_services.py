@@ -288,7 +288,7 @@ def list_notes(
 
 def list_public_notes(
     session: Session,
-    current_user: User,
+    current_user: User | None,
     offset: int = 0,
     limit: int = 10,
     keyword: str | None = None,
@@ -323,15 +323,27 @@ def list_public_notes(
             )
         )
 
-    following_ids = set(session.exec(
-        select(UserFollow.followee_id).where(UserFollow.follower_id == current_user.id)
-    ).all())
-    profile = _get_user_profile(session, current_user)
-
     author_ids = session.exec(
         select(Note.user_id).where(*filters)
     ).all()
     follower_count_map = _get_author_follower_count_map(session, list(set(author_ids)))
+
+    if not current_user:
+        def guest_score(note_dict: dict):
+            features = _get_note_content_features(note_dict)
+            image_density = min(features["image_count"] / 9, 1)
+            text_density = min(features["text_length"] / 220, 1)
+            age_hours = max((datetime.utcnow() - note_dict["created_at"]).total_seconds() / 3600, 0)
+            freshness = 1 / (1 + age_hours / 24)
+            follower_score = min(follower_count_map.get(note_dict["user_id"], 0) / 20, 1) * 0.18
+            return freshness * 0.52 + image_density * 0.18 + text_density * 0.12 + follower_score
+
+        return _build_note_list_response(session, filters, offset, limit, current_user, guest_score)
+
+    following_ids = set(session.exec(
+        select(UserFollow.followee_id).where(UserFollow.follower_id == current_user.id)
+    ).all())
+    profile = _get_user_profile(session, current_user)
 
     def personalized_score(note_dict: dict):
         features = _get_note_content_features(note_dict)

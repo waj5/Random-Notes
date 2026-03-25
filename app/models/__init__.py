@@ -7,3 +7,4 @@ from app.models.media_asset import MediaAsset
 from app.models.block_media_relation import BlockMediaRelation
 from app.models.user_follow import UserFollow
 from app.models.sms_verification_code import SmsVerificationCode
+from app.models.note_share import NoteShare

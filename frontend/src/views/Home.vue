@@ -29,6 +29,35 @@ const handleWindowClick = () => {
   profileMenuOpen.value = false
 }
 
+const promptLogin = () => {
+  window.alert('这个功能需要先登录')
+  router.push('/login')
+}
+
+const goCreate = () => {
+  if (!authStore.isAuthenticated) {
+    promptLogin()
+    return
+  }
+  router.push('/create')
+}
+
+const goDynamic = () => {
+  if (!authStore.isAuthenticated) {
+    promptLogin()
+    return
+  }
+  router.push('/dynamic')
+}
+
+const goMine = () => {
+  if (!authStore.isAuthenticated) {
+    promptLogin()
+    return
+  }
+  router.push('/mine')
+}
+
 const logout = async () => {
   profileMenuOpen.value = false
   await authStore.logout()
@@ -37,11 +66,14 @@ const logout = async () => {
 
 onMounted(async () => {
   window.addEventListener('click', handleWindowClick)
-  await Promise.all([
-    authStore.fetchFollowingIds(),
+  const tasks = [
     notesStore.fetchPublicNotes(),
-    notesStore.fetchHotNotes()
-  ])
+    notesStore.fetchHotNotes(),
+  ]
+  if (authStore.isAuthenticated) {
+    tasks.push(authStore.fetchFollowingIds())
+  }
+  await Promise.all(tasks)
 })
 
 onBeforeUnmount(() => {
@@ -57,20 +89,20 @@ onBeforeUnmount(() => {
           <button class="text-2xl font-black tracking-tight text-sky-500">随心记</button>
           <nav class="hidden items-center gap-6 text-sm text-slate-600 md:flex">
             <button class="font-semibold text-slate-900">首页</button>
-            <button @click="router.push('/dynamic')" class="hover:text-sky-500">动态</button>
-            <button @click="router.push('/mine')" class="hover:text-sky-500">我的</button>
+            <button @click="goDynamic" class="hover:text-sky-500">动态</button>
+            <button @click="goMine" class="hover:text-sky-500">我的</button>
           </nav>
         </div>
 
         <div class="flex items-center gap-3">
           <button
-            @click="router.push('/create')"
+            @click="goCreate"
             class="flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] transition-colors hover:bg-sky-600"
           >
             <Plus :size="18" />
             <span>发布动态</span>
           </button>
-          <div class="relative" @click.stop>
+          <div v-if="authStore.isAuthenticated" class="relative" @click.stop>
             <button
               @click="profileMenuOpen = !profileMenuOpen"
               class="flex h-11 items-center gap-2 rounded-full border border-slate-200 bg-white pl-1 pr-3 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-500"
@@ -103,6 +135,13 @@ onBeforeUnmount(() => {
               </button>
             </div>
           </div>
+          <button
+            v-else
+            @click="router.push('/login')"
+            class="rounded-full border border-sky-200 bg-white px-5 py-2.5 text-sm font-semibold text-sky-500 transition-colors hover:border-sky-300 hover:bg-sky-50"
+          >
+            登录 / 注册
+          </button>
         </div>
       </div>
     </div>
@@ -117,11 +156,13 @@ onBeforeUnmount(() => {
                 <img :src="authStore.user.avatar_url" class="h-full w-full object-cover" />
               </div>
               <div v-else class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-white text-3xl font-bold text-sky-500 shadow-lg">
-                {{ (authStore.user?.nickname || authStore.user?.username || '我').slice(0, 1) }}
+                {{ (authStore.user?.nickname || authStore.user?.username || '客').slice(0, 1) }}
               </div>
               <div class="pb-2">
                 <h1 class="text-3xl font-bold text-slate-900">首页推荐</h1>
-                <p class="mt-2 text-sm text-slate-500">这里会根据你的关注和内容偏好，展示全站公开内容。</p>
+                <p class="mt-2 text-sm text-slate-500">
+                  {{ authStore.isAuthenticated ? '这里会根据你的关注和内容偏好，展示全站公开内容。' : '不登录也可以浏览首页公开内容，想互动时再登录即可。' }}
+                </p>
               </div>
             </div>
 
@@ -159,7 +200,7 @@ onBeforeUnmount(() => {
               <Sparkles :size="16" />
             </button>
             <button
-              @click="router.push('/dynamic')"
+              @click="goDynamic"
               class="flex w-full items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100"
             >
               <span>进入关注动态</span>
@@ -186,7 +227,7 @@ onBeforeUnmount(() => {
         <div class="rounded-3xl border border-white/60 bg-white/82 px-5 py-4 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
           <div class="flex items-center gap-3">
             <button class="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white">全部</button>
-            <button @click="router.push('/dynamic')" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">关注动态</button>
+            <button @click="goDynamic" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">关注动态</button>
           </div>
         </div>
 

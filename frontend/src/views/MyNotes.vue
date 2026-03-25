@@ -1,13 +1,28 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { BookOpen, ChevronDown, FileText, Heart, Images, LogOut, Plus, Settings, UserRound } from 'lucide-vue-next'
+import { BookOpen, ChevronDown, ExternalLink, FileText, Heart, Images, LogOut, Plus, Settings, Share2, UserRound } from 'lucide-vue-next'
+import apiClient from '../api/client'
 import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
 
-type MyTab = 'posts' | 'activity' | 'albums' | 'favorites'
+type MyTab = 'posts' | 'activity' | 'albums' | 'shares'
 type MyFilter = 'all' | 'published' | 'draft'
+
+interface ShareRecord {
+  id: number
+  note_id: number
+  platform: 'xiaohongshu' | 'weibo' | 'moments'
+  note_title: string
+  note_summary?: string
+  note_author_name?: string
+  cover_image_url?: string
+  share_title?: string
+  share_text?: string
+  share_url?: string
+  created_at: string
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -34,8 +49,10 @@ const profileForm = ref({
 })
 const profileSaving = ref(false)
 const profileMessage = ref('')
+const shareRecords = ref<ShareRecord[]>([])
+const shareLoading = ref(false)
 
-const validTabs: MyTab[] = ['posts', 'activity', 'albums', 'favorites']
+const validTabs: MyTab[] = ['posts', 'activity', 'albums', 'shares']
 const validFilters: MyFilter[] = ['all', 'published', 'draft']
 
 const syncStateFromRoute = () => {
@@ -65,6 +82,9 @@ const setTab = (tab: MyTab) => {
   activeTab.value = tab
   if (tab !== 'posts') {
     activeFilter.value = 'all'
+  }
+  if (tab === 'shares') {
+    void fetchShareRecords()
   }
   syncRouteFromState()
 }
@@ -111,6 +131,26 @@ const headerBackgroundStyle = computed(() => (
     : {}
 ))
 
+const platformLabelMap: Record<ShareRecord['platform'], string> = {
+  xiaohongshu: '小红书',
+  weibo: '微博',
+  moments: '朋友圈',
+}
+
+const fetchShareRecords = async () => {
+  shareLoading.value = true
+  try {
+    const response = await apiClient.get('/notes/shares/me', {
+      params: {
+        limit: 100,
+      },
+    })
+    shareRecords.value = response.data.data.items
+  } finally {
+    shareLoading.value = false
+  }
+}
+
 const openProfile = () => {
   profileForm.value = {
     nickname: user.value?.nickname || '',
@@ -154,7 +194,10 @@ const handleWindowClick = () => {
 onMounted(async () => {
   window.addEventListener('click', handleWindowClick)
   syncStateFromRoute()
-  await notesStore.fetchMyNotes()
+  await Promise.all([
+    notesStore.fetchMyNotes(),
+    fetchShareRecords(),
+  ])
 })
 
 onBeforeUnmount(() => {
@@ -282,11 +325,11 @@ watch(() => route.query, () => {
               相册
             </button>
             <button
-              @click="setTab('favorites')"
+              @click="setTab('shares')"
               class="px-1 pb-2 transition-colors"
-              :class="activeTab === 'favorites' ? 'rounded-full border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
+              :class="activeTab === 'shares' ? 'rounded-full border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
             >
-              收藏
+              分享
             </button>
           </div>
         </div>
@@ -325,7 +368,7 @@ watch(() => route.query, () => {
                     ? `已发布动态 ${publishedCount}`
                     : activeTab === 'albums'
                       ? `相册数量 ${albumItems.length}`
-                      : '收藏内容'
+                      : `分享记录 ${shareRecords.length}`
                 }}
               </div>
               <button
@@ -369,6 +412,48 @@ watch(() => route.query, () => {
             </button>
           </div>
 
+          <div v-else-if="activeTab === 'shares' && shareLoading" class="rounded-3xl border border-slate-200 bg-white px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
+            加载分享记录中...
+          </div>
+
+          <div v-else-if="activeTab === 'shares' && shareRecords.length > 0" class="space-y-4">
+            <article
+              v-for="record in shareRecords"
+              :key="record.id"
+              class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(56,84,130,0.06)]"
+            >
+              <div class="flex flex-col gap-5 p-5 md:flex-row">
+                <div v-if="record.cover_image_url" class="h-40 w-full shrink-0 overflow-hidden rounded-3xl bg-slate-100 md:w-56">
+                  <img :src="record.cover_image_url" class="h-full w-full object-cover" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <span class="inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-600">
+                      <Share2 :size="14" />
+                      <span>{{ platformLabelMap[record.platform] }}</span>
+                    </span>
+                    <span class="text-xs text-slate-400">{{ new Date(record.created_at).toLocaleString() }}</span>
+                  </div>
+                  <h3 class="mt-3 line-clamp-1 text-xl font-bold text-slate-900">{{ record.share_title || record.note_title }}</h3>
+                  <p v-if="record.share_text" class="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-600">{{ record.share_text }}</p>
+                  <p v-else-if="record.note_summary" class="mt-3 text-sm leading-7 text-slate-500">{{ record.note_summary }}</p>
+                  <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <div class="text-sm text-slate-400">
+                      原文作者 {{ record.note_author_name || '未知用户' }}
+                    </div>
+                    <button
+                      @click="router.push(`/note/${record.note_id}`)"
+                      class="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition-colors hover:border-sky-300 hover:text-sky-500"
+                    >
+                      <ExternalLink :size="16" />
+                      <span>查看原文</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+
           <div v-else class="rounded-3xl border border-slate-200 bg-white px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
             <button
               @click="router.push('/create')"
@@ -378,8 +463,8 @@ watch(() => route.query, () => {
             </button>
             <p class="mb-2 text-xl font-bold text-gray-800">
               {{
-                activeTab === 'favorites'
-                  ? '还没有收藏内容'
+                activeTab === 'shares'
+                  ? '还没有分享记录'
                   : activeTab === 'albums'
                     ? '还没有相册内容'
                     : activeTab === 'activity'
@@ -389,8 +474,8 @@ watch(() => route.query, () => {
             </p>
             <p class="text-sm text-gray-500">
               {{
-                activeTab === 'favorites'
-                  ? '收藏功能还没接后端，先给你做了可切换的页面状态'
+                activeTab === 'shares'
+                  ? '去笔记详情里点分享，这里会展示你发起过的分享内容'
                   : activeTab === 'albums'
                     ? '发布带图片的内容后，这里会自动聚合展示'
                     : activeTab === 'activity'
@@ -399,7 +484,7 @@ watch(() => route.query, () => {
               }}
             </p>
             <button
-              v-if="activeTab !== 'favorites'"
+              v-if="activeTab !== 'shares'"
               @click="router.push('/create')"
               class="mt-5 rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-600"
             >

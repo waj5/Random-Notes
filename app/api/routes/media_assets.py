@@ -64,11 +64,12 @@ def view_media_asset_api(
     wm: str,
     sig: str,
     request: Request,
+    mode: str = "inline",
     session: Session = Depends(get_session),
 ):
     forwarded_for = request.headers.get("x-forwarded-for", "")
     client_ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.client.host if request.client else "unknown")
-    return serve_signed_media(session, media_id, exp, nonce, wm, sig, client_ip)
+    return serve_signed_media(session, media_id, exp, nonce, wm, sig, client_ip, render_mode=mode)
 
 
 @router.get("/{media_id}/download")

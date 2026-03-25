@@ -79,6 +79,11 @@ const hotCommentLabel = computed(() => {
   return `${author}: ${props.note.hotComment.content}`
 })
 
+const promptLogin = () => {
+  window.alert('请先登录后再使用这个功能')
+  router.push('/login')
+}
+
 const deleteNote = (e: Event) => {
   e.stopPropagation()
   if (confirm('确定要删除这条随想吗？')) {
@@ -89,6 +94,10 @@ const deleteNote = (e: Event) => {
 const toggleFollow = async (e: Event) => {
   e.stopPropagation()
   if (!props.note.userId || isOwner.value) return
+  if (!authStore.isAuthenticated) {
+    promptLogin()
+    return
+  }
 
   if (isFollowing.value) {
     await authStore.unfollowUser(props.note.userId)
@@ -102,6 +111,10 @@ const toggleFollow = async (e: Event) => {
 const openAuthorSpace = (e: Event) => {
   e.stopPropagation()
   if (!props.note.userId) return
+  if (!authStore.isAuthenticated) {
+    promptLogin()
+    return
+  }
   router.push(`/space/${props.note.userId}`)
 }
 </script>

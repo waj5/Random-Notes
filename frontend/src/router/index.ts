@@ -20,8 +20,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: Home,
-      meta: { requiresAuth: true }
+      component: Home
     },
     {
       path: '/create',
@@ -73,6 +72,7 @@ router.beforeEach(async (to, _from, next) => {
     await authStore.initialize()
   }
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    window.alert('这个功能需要先登录')
     next('/login')
   } else {
     next()

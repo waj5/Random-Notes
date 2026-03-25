@@ -5,6 +5,7 @@ import { useNotesStore } from '../stores/notes'
 import type { Note, NoteBlock, LayoutType } from '../stores/notes'
 import { ArrowLeft, Save, Type, Image, Layout, Grid, Send } from 'lucide-vue-next'
 import BlockRenderer from '../components/BlockEditor.vue'
+import PetalBackground from '../components/PetalBackground.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -133,9 +134,10 @@ const saveNote = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-[#EBF4FF] to-[#F0FAFF] flex flex-col font-sans">
+  <div class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#EBF4FF] to-[#F0FAFF] font-sans">
+    <PetalBackground />
     <!-- Navbar -->
-    <header class="bg-white/60 backdrop-blur-md border-b border-white/50 px-6 py-4 flex items-center justify-between sticky top-0 z-50 transition-all duration-300">
+    <header class="sticky top-0 z-50 flex items-center justify-between border-b border-white/50 bg-white/60 px-6 py-4 backdrop-blur-md transition-all duration-300">
       <div class="flex items-center gap-4">
         <button @click="router.back()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors group">
           <ArrowLeft :size="20" class="group-hover:-translate-x-1 transition-transform" />
@@ -163,15 +165,15 @@ const saveNote = async () => {
       </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden" @contextmenu.prevent="showContextMenu" @click="hideContextMenu">
+    <div class="relative z-10 flex flex-1 overflow-hidden" @contextmenu.prevent="showContextMenu" @click="hideContextMenu">
       <!-- Main Editor Area -->
       <main class="flex-1 overflow-y-auto p-4 md:p-6">
         <div class="max-w-4xl mx-auto space-y-8 pb-32">
-          <div class="bg-white/80 backdrop-blur-sm rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 md:p-12 min-h-[calc(100vh-10rem)]">
+          <div class="editor-notebook-page rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] min-h-[calc(100vh-10rem)]">
             <input
               v-model="title"
               placeholder="请输入标题..."
-              class="w-full text-4xl font-bold bg-transparent border-none outline-none placeholder-gray-300 text-gray-800 font-sans tracking-tight mb-8"
+              class="editor-title-input mb-8 w-full border-none bg-transparent text-4xl font-bold tracking-tight text-gray-800 outline-none placeholder-gray-300"
             />
             
             <div class="">
@@ -221,3 +223,31 @@ const saveNote = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.editor-notebook-page {
+  padding: 2.3rem 2.8rem 2.8rem 4.6rem;
+  background-color: #fffef8;
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      transparent 2.3rem,
+      rgba(248, 113, 113, 0.28) 2.3rem,
+      rgba(248, 113, 113, 0.28) 2.45rem,
+      transparent 2.45rem
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(2.4rem - 2px),
+      rgba(148, 163, 184, 0.28) calc(2.4rem - 2px),
+      rgba(148, 163, 184, 0.28) 2.4rem
+    );
+  background-position: 0 1.15rem, 0 1.15rem;
+}
+
+.editor-title-input {
+  line-height: 4.8rem;
+}
+</style>

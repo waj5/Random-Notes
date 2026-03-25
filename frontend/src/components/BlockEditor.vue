@@ -161,7 +161,7 @@ const heartTemplateHint = computed(() => {
       <div
         contenteditable="true"
         @input="updateContent(($event.target as HTMLDivElement).innerText)"
-        class="w-full outline-none font-serif text-lg leading-loose text-gray-700 empty:before:content-[attr(placeholder)] empty:before:text-gray-300 min-h-[1.5em] whitespace-pre-wrap transition-colors"
+        class="editor-text-field w-full outline-none font-serif text-lg text-gray-700 empty:before:content-[attr(placeholder)] empty:before:text-gray-300 min-h-[2.4rem] whitespace-pre-wrap transition-colors"
         placeholder="写下这一刻的想法..."
         ref="textOnlyEditor"
       ></div>
@@ -170,7 +170,7 @@ const heartTemplateHint = computed(() => {
     <!-- Image Top -->
     <div v-else-if="block.type === 'image-top'" class="space-y-4">
       <div v-if="block.images.length > 0" class="relative group/img">
-        <img :src="block.images[0]" class="w-full h-64 object-cover rounded-lg shadow-sm" />
+        <img :src="block.images[0]" class="w-full h-64 object-cover rounded-lg shadow-sm" loading="lazy" decoding="async" />
         <button @click="removeImage(0)" class="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-red-500 opacity-0 group-hover/img:opacity-100 transition-opacity">
           <Trash2 :size="14" />
         </button>
@@ -181,7 +181,7 @@ const heartTemplateHint = computed(() => {
         :value="block.content"
         @input="updateContent(($event.target as HTMLTextAreaElement).value)"
         placeholder="写点什么..."
-        class="w-full bg-transparent resize-none outline-none font-serif text-lg leading-loose text-gray-700 placeholder-gray-300 min-h-[80px]"
+        class="editor-textarea w-full resize-none border-none bg-transparent font-serif text-lg text-gray-700 outline-none placeholder-gray-300 min-h-[96px]"
       ></textarea>
     </div>
 
@@ -191,11 +191,11 @@ const heartTemplateHint = computed(() => {
         :value="block.content"
         @input="updateContent(($event.target as HTMLTextAreaElement).value)"
         placeholder="写点什么..."
-        class="w-full bg-transparent resize-none outline-none font-serif text-lg leading-loose text-gray-700 placeholder-gray-300 min-h-[80px]"
+        class="editor-textarea w-full resize-none border-none bg-transparent font-serif text-lg text-gray-700 outline-none placeholder-gray-300 min-h-[96px]"
       ></textarea>
 
       <div v-if="block.images.length > 0" class="relative group/img">
-        <img :src="block.images[0]" class="w-full h-64 object-cover rounded-lg shadow-sm" />
+        <img :src="block.images[0]" class="w-full h-64 object-cover rounded-lg shadow-sm" loading="lazy" decoding="async" />
         <button @click="removeImage(0)" class="absolute top-2 right-2 bg-white/80 p-1 rounded-full text-red-500 opacity-0 group-hover/img:opacity-100 transition-opacity">
           <Trash2 :size="14" />
         </button>
@@ -207,7 +207,7 @@ const heartTemplateHint = computed(() => {
     <div v-else-if="block.type === 'split-left'" class="clearfix relative min-h-[150px]">
       <div class="float-left w-5/12 mr-4 space-y-2 mb-2 relative z-10 select-none">
          <div v-for="(img, idx) in block.images" :key="idx" class="relative group/img">
-            <img :src="img" class="w-full h-auto object-cover rounded-lg shadow-sm" />
+            <img :src="img" class="w-full h-auto object-cover rounded-lg shadow-sm" loading="lazy" decoding="async" />
             <button @click="removeImage(idx)" class="absolute top-1 right-1 bg-white/80 p-1 rounded-full text-red-500 opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer z-50">
               <Trash2 :size="12" />
             </button>
@@ -217,7 +217,7 @@ const heartTemplateHint = computed(() => {
       <div
         contenteditable="true"
         @input="updateContent(($event.target as HTMLDivElement).innerText)"
-        class="w-full outline-none font-serif text-lg leading-loose text-gray-700 empty:before:content-[attr(placeholder)] empty:before:text-gray-300 min-h-[1.5em] whitespace-pre-wrap"
+        class="editor-text-field w-full outline-none font-serif text-lg text-gray-700 empty:before:content-[attr(placeholder)] empty:before:text-gray-300 min-h-[2.4rem] whitespace-pre-wrap"
         placeholder="描述左边的画面..."
         ref="leftTextEditor"
       ></div>
@@ -228,7 +228,7 @@ const heartTemplateHint = computed(() => {
     <div v-else-if="block.type === 'split-right'" class="clearfix relative min-h-[150px]">
       <div class="float-right w-5/12 ml-4 space-y-2 mb-2 relative z-10 select-none">
          <div v-for="(img, idx) in block.images" :key="idx" class="relative group/img">
-            <img :src="img" class="w-full h-auto object-cover rounded-lg shadow-sm" />
+            <img :src="img" class="w-full h-auto object-cover rounded-lg shadow-sm" loading="lazy" decoding="async" />
             <button @click="removeImage(idx)" class="absolute top-1 right-1 bg-white/80 p-1 rounded-full text-red-500 opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer z-50">
               <Trash2 :size="12" />
             </button>
@@ -238,7 +238,7 @@ const heartTemplateHint = computed(() => {
       <div
         contenteditable="true"
         @input="updateContent(($event.target as HTMLDivElement).innerText)"
-        class="w-full outline-none font-serif text-lg leading-loose text-gray-700 empty:before:content-[attr(placeholder)] empty:before:text-gray-300 min-h-[1.5em] whitespace-pre-wrap"
+        class="editor-text-field w-full outline-none font-serif text-lg text-gray-700 empty:before:content-[attr(placeholder)] empty:before:text-gray-300 min-h-[2.4rem] whitespace-pre-wrap"
         placeholder="描述右边的画面..."
         ref="rightTextEditor"
       ></div>
@@ -266,7 +266,7 @@ const heartTemplateHint = computed(() => {
 
       <div :class="getGalleryContainerClass()" :style="galleryTemplate === 'heart' ? getHeartGridStyle() : undefined">
         <div v-for="(img, idx) in block.images" :key="idx" :class="getGalleryItemClass(idx)">
-            <img :src="img" :class="getGalleryImageClass()" />
+            <img :src="img" :class="getGalleryImageClass()" loading="lazy" decoding="async" />
             <button @click="removeImage(idx)" class="absolute top-1 right-1 bg-white/80 p-1 rounded-full text-red-500 opacity-0 group-hover/img:opacity-100 transition-opacity z-10">
               <Trash2 :size="12" />
             </button>
@@ -282,13 +282,23 @@ const heartTemplateHint = computed(() => {
         :value="block.content"
         @input="updateContent(($event.target as HTMLTextAreaElement).value)"
         placeholder="给这些照片写个总结..."
-        class="w-full bg-transparent resize-none outline-none font-serif text-lg leading-loose text-gray-700 placeholder-gray-300 min-h-[60px]"
+        class="editor-textarea w-full resize-none border-none bg-transparent font-serif text-lg text-gray-700 outline-none placeholder-gray-300 min-h-[72px]"
       ></textarea>
     </div>
   </div>
 </template>
 
 <style scoped>
+.editor-text-field,
+.editor-textarea {
+  line-height: 2.4rem;
+  padding: 0;
+}
+
+.editor-textarea {
+  field-sizing: content;
+}
+
 .heart-gallery {
   clip-path: polygon(50% 100%, 31% 87%, 14% 70%, 5% 51%, 7% 29%, 18% 13%, 34% 7%, 50% 16%, 66% 7%, 82% 13%, 93% 29%, 95% 51%, 86% 70%, 69% 87%);
 }

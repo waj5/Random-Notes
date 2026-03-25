@@ -26,19 +26,19 @@ def list_note_comments(session: Session, note: Note):
     ).all() if user_ids else []
     user_map = {user.id: user for user in users}
 
-    return [
-        {
-            "id": comment.id,
-            "note_id": comment.note_id,
-            "user_id": comment.user_id,
-            "username": user_map[comment.user_id].username if comment.user_id in user_map else "",
-            "nickname": user_map[comment.user_id].nickname if comment.user_id in user_map else "",
-            "avatar_url": user_map[comment.user_id].avatar_url if comment.user_id in user_map else None,
-            "content": comment.content,
-            "created_at": comment.created_at,
-        }
+    serialized_comments = [
+        _serialize_comment(comment, user_map.get(comment.user_id))
         for comment in comments
     ]
+
+    comment_map = {comment["id"]: comment for comment in serialized_comments}
+    root_comments: list[dict] = []
+    for comment in serialized_comments:
+        if comment["parent_id"] and comment["parent_id"] in comment_map:
+            comment_map[comment["parent_id"]]["replies"].append(comment)
+        else:
+            root_comments.append(comment)
+    return root_comments
 
 
 def create_note_comment(
@@ -55,9 +55,16 @@ def create_note_comment(
     if not content:
         raise HTTPException(status_code=400, detail="Comment content cannot be empty")
 
+    parent_id = data.parent_id
+    if parent_id is not None:
+        parent_comment = session.get(NoteComment, parent_id)
+        if not parent_comment or parent_comment.note_id != note_id or parent_comment.deleted_at is not None:
+            raise HTTPException(status_code=404, detail="Parent comment not found")
+
     comment = NoteComment(
         note_id=note_id,
         user_id=current_user.id,
+        parent_id=parent_id,
         content=content,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
@@ -83,11 +90,13 @@ def _serialize_comment(comment: NoteComment, user: User | None):
         "id": comment.id,
         "note_id": comment.note_id,
         "user_id": comment.user_id,
+        "parent_id": comment.parent_id,
         "username": user.username if user else "",
         "nickname": user.nickname if user else "",
         "avatar_url": user.avatar_url if user else None,
         "content": comment.content,
         "created_at": comment.created_at,
+        "replies": [],
     }
 
 
@@ -133,8 +142,27 @@ def delete_note_comment(
     if comment.user_id != current_user.id and note.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No permission to delete this comment")
 
-    comment.deleted_at = datetime.utcnow()
-    comment.updated_at = datetime.utcnow()
-    session.add(comment)
+    target_ids = [comment.id]
+    index = 0
+    while index < len(target_ids):
+        child_ids = session.exec(
+            select(NoteComment.id).where(
+                NoteComment.parent_id == target_ids[index],
+                NoteComment.deleted_at.is_(None),
+            )
+        ).all()
+        for child_id in child_ids:
+            if child_id not in target_ids:
+                target_ids.append(child_id)
+        index += 1
+
+    target_comments = session.exec(
+        select(NoteComment).where(NoteComment.id.in_(target_ids))
+    ).all()
+    deleted_at = datetime.utcnow()
+    for target_comment in target_comments:
+        target_comment.deleted_at = deleted_at
+        target_comment.updated_at = deleted_at
+        session.add(target_comment)
     session.commit()
     return {"message": "Comment deleted"}
