@@ -6,6 +6,7 @@ import apiClient from '../api/client'
 import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
+import PetalBackground from '../components/PetalBackground.vue'
 
 type MyTab = 'posts' | 'activity' | 'albums' | 'shares'
 type MyFilter = 'all' | 'published' | 'draft'
@@ -121,15 +122,24 @@ const albumItems = computed(() =>
     .filter(item => item.imageCount > 0)
 )
 
-const headerBackgroundStyle = computed(() => (
-  user.value?.profile_background_url
-    ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), url(${user.value.profile_background_url})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {}
-))
+const defaultHeroBgUrl = `${import.meta.env.BASE_URL}home-hero-default.svg`
+
+const headerBackgroundStyle = computed(() => {
+  const base = {
+    backgroundSize: 'cover' as const,
+    backgroundPosition: 'center' as const,
+  }
+  if (user.value?.profile_background_url) {
+    return {
+      ...base,
+      backgroundImage: `linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), url(${user.value.profile_background_url})`,
+    }
+  }
+  return {
+    ...base,
+    backgroundImage: `linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0.22)), url(${defaultHeroBgUrl})`,
+  }
+})
 
 const platformLabelMap: Record<ShareRecord['platform'], string> = {
   xiaohongshu: '小红书',
@@ -210,8 +220,10 @@ watch(() => route.query, () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f6f7fb] font-sans">
-    <div class="sticky top-0 z-30 border-b border-white/60 bg-white/85 backdrop-blur-xl">
+  <div class="relative min-h-screen bg-[#dff3f7] font-sans">
+    <PetalBackground />
+    <div class="relative z-10">
+    <div class="sticky top-0 z-30 border-b border-white/60 bg-white/80 backdrop-blur-xl">
       <div class="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 md:px-6">
         <div class="flex items-center gap-8">
           <button class="text-2xl font-black tracking-tight text-sky-500">随心记</button>
@@ -270,7 +282,7 @@ watch(() => route.query, () => {
 
     <div class="mx-auto max-w-[1500px] px-4 py-6">
       <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(56,84,130,0.08)]">
-        <div class="h-48 bg-[linear-gradient(120deg,#67d6ff_0%,#90b8ff_40%,#f4c8ff_100%)]" :style="headerBackgroundStyle"></div>
+        <div class="h-48" :style="headerBackgroundStyle"></div>
         <div class="px-6 pb-6">
           <div class="-mt-14 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div class="flex items-end gap-4">
@@ -337,7 +349,7 @@ watch(() => route.query, () => {
 
       <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <main class="space-y-5">
-          <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
+          <section class="rounded-3xl border border-white/60 bg-white/82 p-5 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
             <div class="flex flex-wrap items-center justify-between gap-4">
               <div v-if="activeTab === 'posts'" class="flex items-center gap-3">
                 <button
@@ -393,7 +405,7 @@ watch(() => route.query, () => {
               v-for="item in albumItems"
               :key="item.id"
               @click="router.push({ path: `/album/${item.noteId}`, query: { source: 'mine' } })"
-              class="group overflow-hidden rounded-3xl border border-slate-200 bg-white text-left shadow-[0_18px_40px_rgba(56,84,130,0.06)] transition-transform hover:-translate-y-1"
+              class="group overflow-hidden rounded-3xl border border-white/60 bg-white/82 text-left shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur transition-transform hover:-translate-y-1"
             >
               <div class="grid aspect-square grid-cols-2 gap-1 overflow-hidden bg-slate-100 p-1">
                 <div
@@ -412,7 +424,7 @@ watch(() => route.query, () => {
             </button>
           </div>
 
-          <div v-else-if="activeTab === 'shares' && shareLoading" class="rounded-3xl border border-slate-200 bg-white px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
+          <div v-else-if="activeTab === 'shares' && shareLoading" class="rounded-3xl border border-white/60 bg-white/82 px-8 py-24 text-center text-slate-400 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
             加载分享记录中...
           </div>
 
@@ -420,7 +432,7 @@ watch(() => route.query, () => {
             <article
               v-for="record in shareRecords"
               :key="record.id"
-              class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_18px_40px_rgba(56,84,130,0.06)]"
+              class="overflow-hidden rounded-3xl border border-white/60 bg-white/82 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur"
             >
               <div class="flex flex-col gap-5 p-5 md:flex-row">
                 <div v-if="record.cover_image_url" class="h-40 w-full shrink-0 overflow-hidden rounded-3xl bg-slate-100 md:w-56">
@@ -454,7 +466,7 @@ watch(() => route.query, () => {
             </article>
           </div>
 
-          <div v-else class="rounded-3xl border border-slate-200 bg-white px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
+          <div v-else class="rounded-3xl border border-white/60 bg-white/82 px-8 py-24 text-center text-slate-400 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
             <button
               @click="router.push('/create')"
               class="mb-6 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-50 text-sky-400 transition-colors hover:bg-sky-100"
@@ -494,24 +506,24 @@ watch(() => route.query, () => {
         </main>
 
         <aside class="space-y-5">
-          <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
+          <section class="rounded-3xl border border-white/60 bg-white/82 p-5 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
             <h2 class="mb-4 text-base font-bold text-slate-900">创作数据</h2>
             <div class="space-y-3">
-              <div class="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+              <div class="flex items-center justify-between rounded-2xl bg-sky-50/50 px-4 py-3">
                 <div class="flex items-center gap-3 text-slate-600">
                   <FileText :size="18" class="text-sky-500" />
                   <span class="text-sm">草稿数量</span>
                 </div>
                 <span class="text-sm font-semibold text-slate-900">{{ draftCount }}</span>
               </div>
-              <div class="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+              <div class="flex items-center justify-between rounded-2xl bg-sky-50/50 px-4 py-3">
                 <div class="flex items-center gap-3 text-slate-600">
                   <BookOpen :size="18" class="text-sky-500" />
                   <span class="text-sm">发布数量</span>
                 </div>
                 <span class="text-sm font-semibold text-slate-900">{{ publishedCount }}</span>
               </div>
-              <div class="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+              <div class="flex items-center justify-between rounded-2xl bg-sky-50/50 px-4 py-3">
                 <div class="flex items-center gap-3 text-slate-600">
                   <Images :size="18" class="text-sky-500" />
                   <span class="text-sm">累计图片</span>
@@ -521,7 +533,7 @@ watch(() => route.query, () => {
             </div>
           </section>
 
-          <section class="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_18px_40px_rgba(56,84,130,0.06)]">
+          <section class="rounded-3xl border border-white/60 bg-white/82 p-5 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
             <h2 class="mb-4 text-base font-bold text-slate-900">个人资料</h2>
             <div class="space-y-3 text-sm text-slate-500">
               <div class="flex items-center justify-between">
@@ -547,6 +559,7 @@ watch(() => route.query, () => {
           </section>
         </aside>
       </div>
+    </div>
     </div>
 
     <Teleport to="body">
