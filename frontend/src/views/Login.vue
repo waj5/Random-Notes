@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import apiClient from '../api/client'
+import PetalBackground from '../components/PetalBackground.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
@@ -194,21 +195,24 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-cyan-50 font-sans">
-    <div class="w-full max-w-md p-8 space-y-8 bg-white rounded-3xl shadow-xl transform transition-all duration-300 hover:shadow-2xl">
+  <div class="relative flex min-h-screen items-center justify-center bg-[#dff3f7] px-4 py-10 font-sans">
+    <PetalBackground />
+    <div
+      class="relative z-10 w-full max-w-md space-y-8 rounded-3xl border border-sky-100 bg-white/92 p-8 shadow-[0_14px_36px_rgba(54,120,160,0.08)] backdrop-blur"
+    >
       <div class="text-center">
-        <h2 class="mt-6 text-3xl font-bold text-gray-900 tracking-wide">随心记</h2>
-        <p class="mt-2 text-sm text-gray-500">{{ title }}</p>
+        <h2 class="text-3xl font-black tracking-tight text-sky-500">随心记</h2>
+        <p class="mt-2 text-sm text-slate-500">{{ title }}</p>
       </div>
       
       <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
         <div class="rounded-md shadow-sm space-y-4">
-          <div v-if="!isRegister && requireSms" class="grid grid-cols-2 gap-3 rounded-2xl bg-cyan-50 p-1">
+          <div v-if="!isRegister && requireSms" class="grid grid-cols-2 gap-3 rounded-2xl bg-sky-50/80 p-1">
             <button
               type="button"
               @click="switchLoginMode(true)"
               class="rounded-xl px-4 py-2 text-sm font-medium transition"
-              :class="useSmsLogin ? 'bg-white text-cyan-700 shadow-sm' : 'text-gray-500'"
+              :class="useSmsLogin ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500'"
             >
               验证码登录
             </button>
@@ -216,7 +220,7 @@ const handleSubmit = async () => {
               type="button"
               @click="switchLoginMode(false)"
               class="rounded-xl px-4 py-2 text-sm font-medium transition"
-              :class="!useSmsLogin ? 'bg-white text-cyan-700 shadow-sm' : 'text-gray-500'"
+              :class="!useSmsLogin ? 'bg-white text-sky-600 shadow-sm' : 'text-slate-500'"
             >
               密码登录
             </button>
@@ -231,7 +235,7 @@ const handleSubmit = async () => {
               type="text"
               autocomplete="username"
               required
-              class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
+              class="appearance-none relative block w-full rounded-xl border border-sky-100 bg-white/80 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/30 sm:text-sm"
               placeholder="请输入账号或手机号"
             />
           </div>
@@ -247,7 +251,7 @@ const handleSubmit = async () => {
               maxlength="11"
               autocomplete="tel"
               required
-              class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
+              class="appearance-none relative block w-full rounded-xl border border-sky-100 bg-white/80 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/30 sm:text-sm"
               placeholder="请输入手机号"
             />
           </div>
@@ -259,14 +263,14 @@ const handleSubmit = async () => {
               inputmode="numeric"
               maxlength="6"
               required
-              class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
+              class="appearance-none relative block w-full rounded-xl border border-sky-100 bg-white/80 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/30 sm:text-sm"
               placeholder="请输入验证码"
             />
             <button
               type="button"
               @click="sendCode"
               :disabled="!canSendCode"
-              class="shrink-0 rounded-xl bg-cyan-100 px-4 text-sm font-medium text-cyan-700 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+              class="shrink-0 rounded-xl bg-sky-100 px-4 text-sm font-medium text-sky-700 transition hover:bg-sky-200 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
             </button>
@@ -280,7 +284,7 @@ const handleSubmit = async () => {
               name="nickname"
               type="text"
               required
-              class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
+              class="appearance-none relative block w-full rounded-xl border border-sky-100 bg-white/80 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/30 sm:text-sm"
               placeholder="请输入昵称"
             />
           </div>
@@ -294,26 +298,26 @@ const handleSubmit = async () => {
               type="password"
               autocomplete="current-password"
               :required="(!isRegister && (!requireSms || !useSmsLogin)) || (isRegister && !requireSms)"
-              class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
+              class="appearance-none relative block w-full rounded-xl border border-sky-100 bg-white/80 px-4 py-3 text-slate-900 placeholder-slate-400 transition focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/30 sm:text-sm"
               :placeholder="isRegister ? (requireSms ? '设置密码（可选）' : '设置密码') : '请输入密码'"
             />
           </div>
         </div>
 
-        <div v-if="!isRegister && (!requireSms || !useSmsLogin)" class="flex items-center justify-between text-sm text-gray-500">
-          <label class="flex items-center gap-2 cursor-pointer select-none">
+        <div v-if="!isRegister && (!requireSms || !useSmsLogin)" class="flex items-center justify-between text-sm text-slate-500">
+          <label class="flex cursor-pointer select-none items-center gap-2">
             <input
               v-model="rememberPassword"
               type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+              class="h-4 w-4 rounded border-sky-200 text-sky-500 focus:ring-sky-400"
             />
             <span>记住密码</span>
           </label>
-          <label class="flex items-center gap-2 cursor-pointer select-none">
+          <label class="flex cursor-pointer select-none items-center gap-2">
             <input
               v-model="autoLogin"
               type="checkbox"
-              class="h-4 w-4 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500"
+              class="h-4 w-4 rounded border-sky-200 text-sky-500 focus:ring-sky-400"
             />
             <span>自动登录</span>
           </label>
@@ -326,7 +330,7 @@ const handleSubmit = async () => {
           <button
             type="submit"
             :disabled="loading"
-            class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition duration-150 ease-in-out transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            class="group relative flex w-full justify-center rounded-full border border-transparent bg-sky-500 py-3 px-4 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] transition hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span v-if="loading">处理中...</span>
             <span v-else>{{ submitText }}</span>
@@ -338,7 +342,7 @@ const handleSubmit = async () => {
             <button 
               type="button"
               @click="toggleMode"
-              class="font-medium text-cyan-600 hover:text-cyan-500 transition-colors focus:outline-none"
+              class="font-medium text-sky-600 transition-colors hover:text-sky-500 focus:outline-none"
             >
               {{ switchText }}
             </button>
