@@ -283,8 +283,8 @@ watch(() => route.query, () => {
     <div class="mx-auto max-w-[1500px] px-4 py-6">
       <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(56,84,130,0.08)]">
         <div class="h-48" :style="headerBackgroundStyle"></div>
-        <div class="px-6 pb-6">
-          <div class="-mt-14 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div class="px-6 pb-4 pt-0">
+          <div class="-mt-14 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div class="flex items-end gap-4">
               <div v-if="user?.avatar_url" class="h-28 w-28 overflow-hidden rounded-full border-4 border-white bg-white shadow-lg">
                 <img :src="user.avatar_url" class="h-full w-full object-cover" />
@@ -292,13 +292,13 @@ watch(() => route.query, () => {
               <div v-else class="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-white text-3xl font-bold text-sky-500 shadow-lg">
                 {{ (user?.nickname || user?.username || '我').slice(0, 1) }}
               </div>
-              <div class="pb-2">
+              <div class="pb-1">
                 <h1 class="text-3xl font-bold text-slate-900">{{ user?.nickname || user?.username || '我的空间' }}</h1>
-                <p class="mt-2 text-sm text-slate-500">这里只展示你自己的内容，草稿和已发布都会保留在这里。</p>
+                <p class="mt-1.5 text-sm text-slate-500">这里只展示你自己的内容，草稿和已发布都会保留在这里。</p>
               </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-6 rounded-3xl border border-white/30 bg-white/15 px-5 py-4 text-center backdrop-blur-md">
+            <div class="grid grid-cols-3 gap-4 sm:gap-6 rounded-3xl border border-white/30 bg-white/15 px-4 py-3 text-center backdrop-blur-md sm:px-5 sm:py-4">
               <div>
                 <div class="text-2xl font-bold text-slate-900">{{ notes.length }}</div>
                 <div class="mt-1 text-xs text-slate-400">全部动态</div>
@@ -313,43 +313,46 @@ watch(() => route.query, () => {
               </div>
             </div>
           </div>
-
-          <div class="mt-6 flex flex-wrap items-center gap-3 border-b border-slate-100 pb-4 text-sm">
-            <button
-              @click="setTab('posts')"
-              class="px-1 pb-2 transition-colors"
-              :class="activeTab === 'posts' ? 'rounded-full border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
-            >
-              投稿
-            </button>
-            <button
-              @click="setTab('activity')"
-              class="px-1 pb-2 transition-colors"
-              :class="activeTab === 'activity' ? 'rounded-full border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
-            >
-              动态
-            </button>
-            <button
-              @click="setTab('albums')"
-              class="px-1 pb-2 transition-colors"
-              :class="activeTab === 'albums' ? 'rounded-full border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
-            >
-              相册
-            </button>
-            <button
-              @click="setTab('shares')"
-              class="px-1 pb-2 transition-colors"
-              :class="activeTab === 'shares' ? 'rounded-full border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
-            >
-              分享
-            </button>
-          </div>
         </div>
       </section>
 
-      <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <main class="space-y-5">
           <section class="rounded-3xl border border-white/60 bg-white/82 p-5 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
+            <div class="mb-4 flex flex-wrap items-center gap-3 border-b border-slate-100 pb-3 text-sm">
+              <button
+                type="button"
+                @click="setTab('posts')"
+                class="px-1 pb-1.5 transition-colors"
+                :class="activeTab === 'posts' ? 'border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
+              >
+                投稿
+              </button>
+              <button
+                type="button"
+                @click="setTab('activity')"
+                class="px-1 pb-1.5 transition-colors"
+                :class="activeTab === 'activity' ? 'border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
+              >
+                动态
+              </button>
+              <button
+                type="button"
+                @click="setTab('albums')"
+                class="px-1 pb-1.5 transition-colors"
+                :class="activeTab === 'albums' ? 'border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
+              >
+                相册
+              </button>
+              <button
+                type="button"
+                @click="setTab('shares')"
+                class="px-1 pb-1.5 transition-colors"
+                :class="activeTab === 'shares' ? 'border-b-2 border-sky-500 font-semibold text-sky-500' : 'text-slate-500 hover:text-sky-500'"
+              >
+                分享
+              </button>
+            </div>
             <div class="flex flex-wrap items-center justify-between gap-4">
               <div v-if="activeTab === 'posts'" class="flex items-center gap-3">
                 <button
