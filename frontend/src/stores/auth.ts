@@ -80,9 +80,14 @@ export const useAuthStore = defineStore('auth', {
     async fetchUser() {
       try {
         const response = await apiClient.get('/auth/me');
-        this.user = response.data.data;
-        this.isAuthenticated = true;
-        localStorage.setItem('user', JSON.stringify(this.user));
+        const user = response.data.data;
+        if (user) {
+          this.user = user;
+          this.isAuthenticated = true;
+          localStorage.setItem('user', JSON.stringify(this.user));
+        } else {
+          this.clearAuthState();
+        }
       } catch (error) {
         console.error('Fetch user failed:', error);
         this.clearAuthState();

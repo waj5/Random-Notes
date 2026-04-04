@@ -211,10 +211,10 @@ def refresh_api(
 
 @router.get("/me")
 def me_api(
-    current_user: User = Depends(get_current_user),
+    current_user: User | None = Depends(get_current_user_optional),
 ):
-    user = current_user
-    return success_response(user)
+    """未登录、token 无效或会话已在库中失效时返回 data: null，避免前端反复 401+refresh。"""
+    return success_response(current_user)
 
 
 @router.put("/me")
