@@ -15,15 +15,31 @@ const trendingNotes = computed(() => notesStore.hotNotes.slice(0, 8))
 const featuredNote = computed(() => notes.value[0])
 const profileMenuOpen = ref(false)
 
-const headerBackgroundStyle = computed(() => (
-  authStore.user?.profile_background_url
-    ? {
-        backgroundImage: `linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), url(${authStore.user.profile_background_url})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }
-    : {}
-))
+const defaultHeroBgUrl = `${import.meta.env.BASE_URL}home-hero-default.svg`
+
+const heroTitle = computed(() => {
+  if (authStore.isAuthenticated && authStore.user) {
+    return authStore.user.nickname?.trim() || authStore.user.username || '我'
+  }
+  return '随心广场'
+})
+
+const headerBackgroundStyle = computed(() => {
+  const base = {
+    backgroundSize: 'cover' as const,
+    backgroundPosition: 'center' as const,
+  }
+  if (authStore.user?.profile_background_url) {
+    return {
+      ...base,
+      backgroundImage: `linear-gradient(rgba(255,255,255,0.08), rgba(255,255,255,0.08)), url(${authStore.user.profile_background_url})`,
+    }
+  }
+  return {
+    ...base,
+    backgroundImage: `linear-gradient(rgba(255,255,255,0.12), rgba(255,255,255,0.22)), url(${defaultHeroBgUrl})`,
+  }
+})
 
 const handleWindowClick = () => {
   profileMenuOpen.value = false
@@ -148,7 +164,7 @@ onBeforeUnmount(() => {
 
     <div class="mx-auto max-w-[1500px] px-4 py-6">
       <section class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_40px_rgba(56,84,130,0.08)]">
-        <div class="h-48 bg-[linear-gradient(120deg,#67d6ff_0%,#90b8ff_40%,#f4c8ff_100%)]" :style="headerBackgroundStyle"></div>
+        <div class="h-48" :style="headerBackgroundStyle"></div>
         <div class="px-6 pb-6">
           <div class="-mt-14 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div class="flex items-end gap-4">
@@ -159,9 +175,13 @@ onBeforeUnmount(() => {
                 {{ (authStore.user?.nickname || authStore.user?.username || '客').slice(0, 1) }}
               </div>
               <div class="pb-2">
-                <h1 class="text-3xl font-bold text-slate-900">首页推荐</h1>
+                <h1 class="text-3xl font-bold text-slate-900">{{ heroTitle }}</h1>
                 <p class="mt-2 text-sm text-slate-500">
-                  {{ authStore.isAuthenticated ? '这里会根据你的关注和内容偏好，展示全站公开内容。' : '不登录也可以浏览首页公开内容，想互动时再登录即可。' }}
+                  {{
+                    authStore.isAuthenticated
+                      ? '全站公开动态信息流。关注作者后，在「动态」页查看仅关注内容。'
+                      : '浏览全站公开动态；登录后可关注作者、点赞评论与发布。'
+                  }}
                 </p>
               </div>
             </div>
@@ -169,7 +189,7 @@ onBeforeUnmount(() => {
             <div class="grid grid-cols-3 gap-6 rounded-3xl border border-white/30 bg-white/15 px-5 py-4 text-center backdrop-blur-md">
               <div>
                 <div class="text-2xl font-bold text-slate-900">{{ notes.length }}</div>
-                <div class="mt-1 text-xs text-slate-400">推荐动态</div>
+                <div class="mt-1 text-xs text-slate-400">公开动态</div>
               </div>
               <div>
                 <div class="text-2xl font-bold text-slate-900">{{ authStore.followingIds.length }}</div>
@@ -192,11 +212,11 @@ onBeforeUnmount(() => {
               <Compass :size="26" />
             </div>
             <h2 class="text-lg font-bold text-slate-800">动态广场</h2>
-            <p class="mt-2 text-sm leading-6 text-slate-600">首页现在按你的关注和内容偏好做推荐，同时保留全站热门榜单。</p>
+            <p class="mt-2 text-sm leading-6 text-slate-600">本页为全站公开动态；登录可关注作者，在「动态」页看关注流，右侧为热门榜单。</p>
           </div>
           <div class="space-y-3 p-4">
-            <button class="flex w-full items-center justify-between rounded-2xl bg-sky-50 px-4 py-3 text-left text-sm font-medium text-sky-600">
-              <span>个性推荐</span>
+            <button type="button" class="flex w-full cursor-default items-center justify-between rounded-2xl bg-sky-50 px-4 py-3 text-left text-sm font-medium text-sky-600">
+              <span>公开信息流</span>
               <Sparkles :size="16" />
             </button>
             <button
