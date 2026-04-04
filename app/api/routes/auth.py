@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlmodel import Session
 
 from app.api.deps import get_current_session_id, get_current_user, get_current_user_optional, get_session
+from app.core.client_ip import get_client_ip
 from app.core.config import (
     ACCESS_COOKIE_NAME,
     ACCESS_COOKIE_PATH,
@@ -15,6 +16,9 @@ from app.core.config import (
     REFRESH_COOKIE_NAME,
     REFRESH_COOKIE_PATH,
     REFRESH_TOKEN_EXPIRE_DAYS,
+    REGISTER_RATE_LIMIT_MAX_ATTEMPTS,
+    REGISTER_RATE_LIMIT_WINDOW_SECONDS,
+    REQUIRE_SMS_VERIFICATION,
     SMS_SEND_COOLDOWN_SECONDS,
     SMS_SEND_IP_LIMIT,
     SMS_SEND_PHONE_LIMIT,
@@ -50,6 +54,11 @@ from app.services.auth_services import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 LOGIN_MODE_COOKIE_NAME = "remember_login"
+
+
+@router.get("/auth-options")
+def auth_options_api():
+    return success_response({"require_sms_verification": REQUIRE_SMS_VERIFICATION})
 
 
 def _set_auth_cookies(response: Response, token_payload: TokenResponse, persistent_login: bool):
@@ -91,18 +100,19 @@ def _clear_auth_cookies(response: Response):
     response.delete_cookie(key=LOGIN_MODE_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
 
 
-def _client_ip(request: Request):
-    forwarded_for = request.headers.get("x-forwarded-for", "")
-    if forwarded_for:
-        return forwarded_for.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
-
-
 @router.post("/register")
 def register_api(
+    request: Request,
     data: UserRegister,
     session: Session = Depends(get_session),
 ):
+    ip_address = get_client_ip(request)
+    rate_limiter.hit(
+        f"register:ip:{ip_address}",
+        REGISTER_RATE_LIMIT_MAX_ATTEMPTS,
+        REGISTER_RATE_LIMIT_WINDOW_SECONDS,
+        "Too many registration attempts, please try again later",
+    )
     user = register_user(session, data)
     return success_response(user, "User registered successfully")
 
@@ -113,7 +123,9 @@ def send_sms_code_api(
     data: SmsCodeSendRequest,
     session: Session = Depends(get_session),
 ):
-    ip_address = _client_ip(request)
+    if not REQUIRE_SMS_VERIFICATION:
+        raise HTTPException(status_code=400, detail="SMS verification is disabled")
+    ip_address = get_client_ip(request)
     phone = normalize_phone(data.phone)
     rate_limiter.hit(
         f"sms:ip:{ip_address}",
@@ -151,7 +163,7 @@ def login_api(
     session: Session = Depends(get_session),
 ):
     user_agent = request.headers.get("user-agent")
-    ip_address = _client_ip(request)
+    ip_address = get_client_ip(request)
     ip_key = f"login:ip:{ip_address}"
     login_identity = (data.account or data.phone or "").strip().lower()
     user_key = f"login:user:{login_identity}"

@@ -10,6 +10,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["X-Robots-Tag"] = "noindex, nofollow, noimageindex"
+        response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
         if request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https":
             response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response

@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 
 from app.api.routes.auth import router as auth_router
@@ -12,8 +13,16 @@ from app.api.routes.note_blocks import router as note_blocks_router
 from app.api.routes.note_comments import router as note_comments_router
 from app.api.routes.notes import router as notes_router
 from app.api.routes.note_shares import router as note_shares_router
-from app.core.config import CORS_ALLOWED_ORIGINS, ENFORCE_HTTPS, IMAGE_UPLOAD_DIR, UPLOAD_DIR
+from app.core.config import (
+    APP_ENV,
+    CORS_ALLOWED_ORIGINS,
+    ENFORCE_HTTPS,
+    IMAGE_UPLOAD_DIR,
+    TRUSTED_HOSTS,
+    UPLOAD_DIR,
+)
 from app.core.exception_handlers import register_exception_handlers
+from app.core.global_rate_limit import GlobalRateLimitMiddleware
 from app.core.http_security import SecurityHeadersMiddleware
 from app.db.database import create_db_and_tables
 
@@ -27,7 +36,14 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Random Notes API", lifespan=lifespan)
+_openapi_public = APP_ENV != "production"
+app = FastAPI(
+    title="Random Notes API",
+    lifespan=lifespan,
+    docs_url="/docs" if _openapi_public else None,
+    redoc_url="/redoc" if _openapi_public else None,
+    openapi_url="/openapi.json" if _openapi_public else None,
+)
 
 if ENFORCE_HTTPS:
     app.add_middleware(HTTPSRedirectMiddleware)
@@ -41,6 +57,10 @@ app.add_middleware(
 )
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(GlobalRateLimitMiddleware)
+
+if TRUSTED_HOSTS:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=TRUSTED_HOSTS)
 
 register_exception_handlers(app)
 

@@ -10,6 +10,7 @@ RUN npm run build
 
 FROM nginx:alpine
 ARG SUBPATH=notes
+COPY docker/nginx-limits.conf /etc/nginx/conf.d/00-limits.conf
 COPY docker/nginx.subpath.template.conf /tmp/nginx.tmpl
 RUN sed "s/__SUBPATH__/${SUBPATH}/g" /tmp/nginx.tmpl > /etc/nginx/conf.d/default.conf && rm /tmp/nginx.tmpl
 COPY --from=build /app/dist /usr/share/nginx/html/${SUBPATH}

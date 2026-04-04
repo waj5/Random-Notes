@@ -5,7 +5,7 @@ from uuid import uuid4
 from fastapi import HTTPException
 from sqlmodel import Session, select
 
-from app.core.config import APP_ENV, SMS_CODE_EXPIRE_MINUTES
+from app.core.config import APP_ENV, REQUIRE_SMS_VERIFICATION, SMS_CODE_EXPIRE_MINUTES
 from app.core.security import (
     REFRESH_TOKEN_EXPIRE_DAYS,
     create_access_token,
@@ -146,7 +146,11 @@ def verify_sms_code(session: Session, phone: str, purpose: str, code: str):
 
 def register_user(session: Session, data: UserRegister):
     if data.phone:
-        phone = verify_sms_code(session, data.phone, "register", data.sms_code or "")
+        phone = normalize_phone(data.phone)
+        if not REQUIRE_SMS_VERIFICATION and not (data.password or "").strip():
+            raise HTTPException(status_code=400, detail="Password is required")
+        if REQUIRE_SMS_VERIFICATION:
+            phone = verify_sms_code(session, data.phone, "register", data.sms_code or "")
         existing_phone_user = session.exec(
             select(User).where(User.phone == phone)
         ).first()
@@ -196,14 +200,15 @@ def login_user(
     user_agent: str | None = None,
     ip_address: str | None = None,
 ) -> TokenResponse:
-    if data.sms_code and (data.phone or data.account):
+    if REQUIRE_SMS_VERIFICATION and data.sms_code and (data.phone or data.account):
         phone = verify_sms_code(session, data.phone or data.account or "", "login", data.sms_code)
         user = session.exec(select(User).where(User.phone == phone)).first()
         user = _get_active_user(session, user)
         return _create_user_session(session, user, user_agent, ip_address)
 
-    if data.password and data.account:
-        account = data.account.strip()
+    login_account = (data.account or data.phone or "").strip()
+    if data.password and login_account:
+        account = login_account
         user = session.exec(
             select(User).where(
                 (User.username == account) | (User.phone == account)

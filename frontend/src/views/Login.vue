@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import apiClient from '../api/client'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
@@ -8,6 +9,7 @@ const authStore = useAuthStore()
 
 const isRegister = ref(false)
 const useSmsLogin = ref(true)
+const requireSms = ref(true)
 const account = ref('')
 const phone = ref('')
 const password = ref('')
@@ -24,7 +26,11 @@ let countdownTimer: number | null = null
 const SAVED_LOGIN_KEY = 'savedLoginCredentials'
 const AUTO_LOGIN_KEY = 'autoLoginEnabled'
 
-const title = computed(() => isRegister.value ? '手机号注册' : (useSmsLogin.value ? '手机号验证码登录' : '账号密码登录'))
+const title = computed(() => {
+  if (isRegister.value) return '手机号注册'
+  if (requireSms.value && useSmsLogin.value) return '手机号验证码登录'
+  return '账号密码登录'
+})
 const submitText = computed(() => isRegister.value ? '立即注册' : '登录')
 const switchText = computed(() => isRegister.value ? '已有账号？去登录' : '没有账号？去注册')
 const canSendCode = computed(() => /^1\d{10}$/.test(phone.value) && countdown.value === 0 && !loading.value)
@@ -64,7 +70,16 @@ const switchLoginMode = (smsMode: boolean) => {
   smsCode.value = ''
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const r = await apiClient.get('auth/auth-options')
+    requireSms.value = !!r.data.data?.require_sms_verification
+    if (!requireSms.value) {
+      useSmsLogin.value = false
+    }
+  } catch {
+    requireSms.value = true
+  }
   autoLogin.value = localStorage.getItem(AUTO_LOGIN_KEY) !== 'false'
   const saved = localStorage.getItem(SAVED_LOGIN_KEY)
   if (!saved) return
@@ -86,7 +101,7 @@ onBeforeUnmount(() => {
 })
 
 const sendCode = async () => {
-  if (!canSendCode.value) return
+  if (!requireSms.value || !canSendCode.value) return
   error.value = ''
   message.value = ''
   try {
@@ -103,18 +118,26 @@ const sendCode = async () => {
 
 const handleSubmit = async () => {
   if (isRegister.value) {
-    if (!phone.value || !smsCode.value || !nickname.value) {
-      error.value = '请输入手机号、验证码和昵称'
+    if (!phone.value || !nickname.value) {
+      error.value = '请输入手机号和昵称'
       return
     }
-  } else if (useSmsLogin.value) {
+    if (requireSms.value && !smsCode.value) {
+      error.value = '请输入验证码'
+      return
+    }
+    if (!requireSms.value && !password.value) {
+      error.value = '请设置密码'
+      return
+    }
+  } else if (requireSms.value && useSmsLogin.value) {
     if (!phone.value || !smsCode.value) {
       error.value = '请输入手机号和验证码'
       return
     }
   } else {
     if (!account.value || !password.value) {
-      error.value = '请输入账号和密码'
+      error.value = '请输入账号或手机号和密码'
       return
     }
   }
@@ -127,17 +150,17 @@ const handleSubmit = async () => {
     if (isRegister.value) {
       await authStore.register({
         phone: phone.value,
-        sms_code: smsCode.value,
+        ...(requireSms.value ? { sms_code: smsCode.value } : {}),
         nickname: nickname.value,
         password: password.value || undefined,
       })
       isRegister.value = false
-      useSmsLogin.value = true
+      useSmsLogin.value = requireSms.value
       account.value = phone.value
       smsCode.value = ''
       message.value = '注册成功，请登录'
     } else {
-      if (useSmsLogin.value) {
+      if (requireSms.value && useSmsLogin.value) {
         await authStore.login({
           phone: phone.value,
           sms_code: smsCode.value,
@@ -180,7 +203,7 @@ const handleSubmit = async () => {
       
       <form class="mt-8 space-y-6" @submit.prevent="handleSubmit">
         <div class="rounded-md shadow-sm space-y-4">
-          <div v-if="!isRegister" class="grid grid-cols-2 gap-3 rounded-2xl bg-cyan-50 p-1">
+          <div v-if="!isRegister && requireSms" class="grid grid-cols-2 gap-3 rounded-2xl bg-cyan-50 p-1">
             <button
               type="button"
               @click="switchLoginMode(true)"
@@ -199,7 +222,7 @@ const handleSubmit = async () => {
             </button>
           </div>
 
-          <div v-if="!isRegister && !useSmsLogin">
+          <div v-if="!isRegister && (!requireSms || !useSmsLogin)">
             <label for="account" class="sr-only">账号或手机号</label>
             <input
               v-model="account"
@@ -213,7 +236,7 @@ const handleSubmit = async () => {
             />
           </div>
 
-          <div v-else>
+          <div v-else-if="isRegister || (requireSms && useSmsLogin)">
             <label for="phone" class="sr-only">手机号</label>
             <input
               v-model="phone"
@@ -229,7 +252,7 @@ const handleSubmit = async () => {
             />
           </div>
 
-          <div v-if="isRegister || useSmsLogin" class="flex gap-3">
+          <div v-if="requireSms && (isRegister || useSmsLogin)" class="flex gap-3">
             <input
               v-model="smsCode"
               type="text"
@@ -262,7 +285,7 @@ const handleSubmit = async () => {
             />
           </div>
 
-          <div v-if="!useSmsLogin || isRegister">
+          <div v-if="isRegister || !requireSms || !useSmsLogin">
             <label for="password" class="sr-only">密码</label>
             <input
               v-model="password"
@@ -270,14 +293,14 @@ const handleSubmit = async () => {
               name="password"
               type="password"
               autocomplete="current-password"
-              :required="!useSmsLogin && !isRegister"
+              :required="(!isRegister && (!requireSms || !useSmsLogin)) || (isRegister && !requireSms)"
               class="appearance-none rounded-xl relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-cyan-500 focus:border-cyan-500 sm:text-sm transition duration-150 ease-in-out"
-              :placeholder="isRegister ? '设置密码（可选）' : '请输入密码'"
+              :placeholder="isRegister ? (requireSms ? '设置密码（可选）' : '设置密码') : '请输入密码'"
             />
           </div>
         </div>
 
-        <div v-if="!isRegister && !useSmsLogin" class="flex items-center justify-between text-sm text-gray-500">
+        <div v-if="!isRegister && (!requireSms || !useSmsLogin)" class="flex items-center justify-between text-sm text-gray-500">
           <label class="flex items-center gap-2 cursor-pointer select-none">
             <input
               v-model="rememberPassword"
