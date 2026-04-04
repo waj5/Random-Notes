@@ -501,10 +501,10 @@ const deleteComment = async (commentId: number) => {
 </script>
 
 <template>
-  <div class="relative min-h-screen overflow-hidden bg-gradient-to-br from-white via-[#f5fbff] to-[#fff5f9] font-sans">
+  <div class="relative min-h-screen overflow-hidden bg-[#dff3f7] font-sans">
     <PetalBackground />
-    <!-- Navbar -->
-    <header class="sticky top-0 z-50 border-b border-sky-100/60 bg-white/90 backdrop-blur-md transition-all duration-300 shadow-sm shadow-sky-100/40">
+    <!-- Navbar（与首页顶栏一致） -->
+    <header class="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl transition-all duration-300">
       <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
         <button @click="router.back()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors group">
           <ArrowLeft :size="20" class="group-hover:-translate-x-1 transition-transform" />
@@ -534,10 +534,10 @@ const deleteComment = async (commentId: number) => {
     </main>
 
     <main v-else-if="note" class="relative z-10 mx-auto my-6 min-h-[calc(100vh-8rem)] max-w-4xl space-y-8 px-8 py-12">
-      <section class="notebook-page rounded-3xl shadow-[0_12px_48px_rgba(56,130,246,0.07)] ring-1 ring-sky-100/50">
+      <section class="notebook-page rounded-3xl border border-sky-100 bg-white/92 shadow-[0_14px_36px_rgba(54,120,160,0.08)] backdrop-blur">
         <div class="text-center space-y-4 pb-10 pt-6">
           <h1 class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight leading-tight">{{ note.title }}</h1>
-          <div class="text-sm font-medium tracking-wide text-sky-600/55">
+          <div class="text-sm font-medium tracking-wide text-slate-500">
             {{ new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) }}
           </div>
         </div>
@@ -811,22 +811,22 @@ const deleteComment = async (commentId: number) => {
 <style scoped>
 .notebook-page {
   padding: 2.3rem 2.8rem 2.8rem 4.6rem;
-  background-color: #fffefb;
+  background-color: rgba(255, 255, 255, 0.97);
   background-image:
     linear-gradient(
       to right,
       transparent 0,
       transparent 2.3rem,
-      rgba(251, 182, 193, 0.22) 2.3rem,
-      rgba(251, 182, 193, 0.22) 2.45rem,
+      rgba(251, 182, 193, 0.2) 2.3rem,
+      rgba(251, 182, 193, 0.2) 2.45rem,
       transparent 2.45rem
     ),
     repeating-linear-gradient(
       to bottom,
       transparent 0,
       transparent calc(2.4rem - 2px),
-      rgba(186, 230, 253, 0.35) calc(2.4rem - 2px),
-      rgba(186, 230, 253, 0.35) 2.4rem
+      rgba(148, 163, 184, 0.22) calc(2.4rem - 2px),
+      rgba(148, 163, 184, 0.22) 2.4rem
     );
   background-position: 0 1.15rem, 0 1.15rem;
 }
