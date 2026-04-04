@@ -1,6 +1,9 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
+/** 并发 401 时只发起一次 refresh，避免对 /auth/refresh 风暴请求 */
+let refreshFlight: Promise<void> | null = null;
+
 const appBase = import.meta.env.BASE_URL.endsWith('/')
   ? import.meta.env.BASE_URL
   : `${import.meta.env.BASE_URL}/`
@@ -44,12 +47,14 @@ apiClient.interceptors.response.use(
       if (!isRefreshRequest && !error.config._retry) {
         error.config._retry = true;
         try {
-          // Try to refresh the token
-          await authStore.refreshUserToken();
-          // Retry the original request
+          if (!refreshFlight) {
+            refreshFlight = authStore.refreshUserToken().finally(() => {
+              refreshFlight = null;
+            });
+          }
+          await refreshFlight;
           return apiClient(error.config);
         } catch (refreshError) {
-          // If refresh fails, clear local auth only
           authStore.clearAuthState();
           return Promise.reject(refreshError);
         }

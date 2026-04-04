@@ -37,16 +37,7 @@ export const useAuthStore = defineStore('auth', {
           await this.fetchFollowingIds()
         }
       } catch {
-        try {
-          await this.refreshUserToken()
-          await this.fetchUser()
-          if (this.user) {
-            this.isAuthenticated = true
-            await this.fetchFollowingIds()
-          }
-        } catch {
-          this.clearAuthState()
-        }
+        // 401 时 api 拦截器已尝试 refresh，勿再调 refresh，避免刷屏
       } finally {
         this.initialized = true
       }
