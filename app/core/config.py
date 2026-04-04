@@ -24,6 +24,11 @@ CORS_ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
+# 子路径部署时设为与前端一致，如 /notes（勿带尾部斜杠）；根路径部署留空
+_cookie_prefix = os.getenv("COOKIE_PATH_PREFIX", "").strip().rstrip("/")
+ACCESS_COOKIE_PATH = _cookie_prefix if _cookie_prefix else "/"
+REFRESH_COOKIE_PATH = f"{_cookie_prefix}/api/auth" if _cookie_prefix else "/api/auth"
+
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(PROJECT_DIR / "uploads")))
 IMAGE_UPLOAD_DIR = UPLOAD_DIR / "images"

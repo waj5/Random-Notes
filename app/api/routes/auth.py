@@ -4,6 +4,7 @@ from sqlmodel import Session
 from app.api.deps import get_current_session_id, get_current_user, get_current_user_optional, get_session
 from app.core.config import (
     ACCESS_COOKIE_NAME,
+    ACCESS_COOKIE_PATH,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     COOKIE_SAMESITE,
     COOKIE_SECURE,
@@ -12,6 +13,7 @@ from app.core.config import (
     LOGIN_RATE_LIMIT_WINDOW_SECONDS,
     LOGIN_USER_RATE_LIMIT_MAX_ATTEMPTS,
     REFRESH_COOKIE_NAME,
+    REFRESH_COOKIE_PATH,
     REFRESH_TOKEN_EXPIRE_DAYS,
     SMS_SEND_COOLDOWN_SECONDS,
     SMS_SEND_IP_LIMIT,
@@ -58,7 +60,7 @@ def _set_auth_cookies(response: Response, token_payload: TokenResponse, persiste
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60 if persistent_login else None,
-        path="/",
+        path=ACCESS_COOKIE_PATH,
     )
     if token_payload.refresh_token:
         refresh_cookie_kwargs = {
@@ -67,7 +69,7 @@ def _set_auth_cookies(response: Response, token_payload: TokenResponse, persiste
             "httponly": True,
             "secure": COOKIE_SECURE,
             "samesite": COOKIE_SAMESITE,
-            "path": "/api/auth",
+            "path": REFRESH_COOKIE_PATH,
         }
         if persistent_login:
             refresh_cookie_kwargs["max_age"] = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
@@ -79,14 +81,14 @@ def _set_auth_cookies(response: Response, token_payload: TokenResponse, persiste
         secure=COOKIE_SECURE,
         samesite=COOKIE_SAMESITE,
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60 if persistent_login else None,
-        path="/api/auth",
+        path=REFRESH_COOKIE_PATH,
     )
 
 
 def _clear_auth_cookies(response: Response):
-    response.delete_cookie(key=ACCESS_COOKIE_NAME, path="/")
-    response.delete_cookie(key=REFRESH_COOKIE_NAME, path="/api/auth")
-    response.delete_cookie(key=LOGIN_MODE_COOKIE_NAME, path="/api/auth")
+    response.delete_cookie(key=ACCESS_COOKIE_NAME, path=ACCESS_COOKIE_PATH)
+    response.delete_cookie(key=REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+    response.delete_cookie(key=LOGIN_MODE_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
 
 
 def _client_ip(request: Request):

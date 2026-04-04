@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
 import apiClient from '../api/client'
 
 interface User {
@@ -171,8 +170,7 @@ export const useAuthStore = defineStore('auth', {
         return
       }
 
-      axios.post('/api/auth/logout', {}, {
-        withCredentials: true,
+      apiClient.post('/auth/logout', {}, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },

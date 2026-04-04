@@ -3,7 +3,10 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
 // https://vite.dev/config/
+const base = (process.env.VITE_BASE || '/').replace(/\/?$/, '/') as `/${string}`
+
 export default defineConfig({
+  base,
   plugins: [vue()],
   resolve: {
     alias: {

@@ -1,8 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/auth';
 
+const appBase = import.meta.env.BASE_URL.endsWith('/')
+  ? import.meta.env.BASE_URL
+  : `${import.meta.env.BASE_URL}/`
+
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: `${appBase}api`,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -11,6 +15,9 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
+    if (config.url?.startsWith('/')) {
+      config.url = config.url.slice(1)
+    }
     const authStore = useAuthStore();
     if (authStore.token) {
       config.headers.Authorization = `Bearer ${authStore.token}`;
