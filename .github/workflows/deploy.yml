@@ -13,16 +13,18 @@ jobs:
   ssh-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: SSH pull & compose
-        uses: appleboy/ssh-action@v1.2.2
+      - uses: webfactory/ssh-agent@v0.9.0
         with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: 22000
-          script: |
-            set -e
-            cd ~/Random-Notes
-            git pull --ff-only
-            cd deploy
-            docker compose up -d --build
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Known hosts
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p 22000 -T 30 "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Pull & compose
+        run: |
+          ssh -p 22000 -o BatchMode=yes -o ConnectTimeout=30 \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            'set -e; cd ~/Random-Notes && git pull --ff-only && cd deploy && docker compose up -d --build'
