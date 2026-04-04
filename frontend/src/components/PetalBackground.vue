@@ -6,7 +6,7 @@ const petals = Array.from({ length: 18 }, (_, index) => ({
   duration: `${14 + Math.random() * 10}s`,
   scale: 0.65 + Math.random() * 0.9,
   drift: `${(Math.random() * 160 - 80).toFixed(0)}px`,
-  opacity: 0.28 + Math.random() * 0.32,
+  opacity: 0.14 + Math.random() * 0.2,
   rotate: `${Math.random() * 360}deg`,
 }))
 </script>
@@ -46,9 +46,9 @@ const petals = Array.from({ length: 18 }, (_, index) => ({
   width: 20px;
   height: 28px;
   border-radius: 65% 35% 70% 30% / 60% 45% 55% 40%;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.92), rgba(255,255,255,0) 28%),
-    linear-gradient(160deg, rgba(255,229,238,0.95), rgba(255,183,197,0.88) 58%, rgba(255,146,176,0.84));
-  box-shadow: 0 0 16px rgba(255, 171, 196, 0.18);
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.98), rgba(255,255,255,0) 32%),
+    linear-gradient(160deg, rgba(255,252,253,0.9), rgba(255,218,230,0.55) 55%, rgba(255,200,220,0.42));
+  box-shadow: 0 0 20px rgba(255, 200, 220, 0.12);
   filter: blur(0.2px);
   animation: petal-fall linear infinite;
 }

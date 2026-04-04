@@ -134,10 +134,10 @@ const saveNote = async () => {
 </script>
 
 <template>
-  <div class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-[#EBF4FF] to-[#F0FAFF] font-sans">
+  <div class="relative flex min-h-screen flex-col overflow-hidden bg-gradient-to-br from-white via-[#f5fbff] to-[#fff5f9] font-sans">
     <PetalBackground />
     <!-- Navbar -->
-    <header class="sticky top-0 z-50 flex items-center justify-between border-b border-white/50 bg-white/60 px-6 py-4 backdrop-blur-md transition-all duration-300">
+    <header class="sticky top-0 z-50 flex items-center justify-between border-b border-sky-100/60 bg-white/90 px-6 py-4 backdrop-blur-md transition-all duration-300 shadow-sm shadow-sky-100/40">
       <div class="flex items-center gap-4">
         <button @click="router.back()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors group">
           <ArrowLeft :size="20" class="group-hover:-translate-x-1 transition-transform" />
@@ -169,7 +169,7 @@ const saveNote = async () => {
       <!-- Main Editor Area -->
       <main class="flex-1 overflow-y-auto p-4 md:p-6">
         <div class="max-w-4xl mx-auto space-y-8 pb-32">
-          <div class="editor-notebook-page rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] min-h-[calc(100vh-10rem)]">
+          <div class="editor-notebook-page rounded-3xl shadow-[0_12px_48px_rgba(56,130,246,0.07)] ring-1 ring-sky-100/50 min-h-[calc(100vh-10rem)]">
             <input
               v-model="title"
               placeholder="请输入标题..."
@@ -227,22 +227,22 @@ const saveNote = async () => {
 <style scoped>
 .editor-notebook-page {
   padding: 2.3rem 2.8rem 2.8rem 4.6rem;
-  background-color: #fffef8;
+  background-color: #fffefb;
   background-image:
     linear-gradient(
       to right,
       transparent 0,
       transparent 2.3rem,
-      rgba(248, 113, 113, 0.28) 2.3rem,
-      rgba(248, 113, 113, 0.28) 2.45rem,
+      rgba(251, 182, 193, 0.22) 2.3rem,
+      rgba(251, 182, 193, 0.22) 2.45rem,
       transparent 2.45rem
     ),
     repeating-linear-gradient(
       to bottom,
       transparent 0,
       transparent calc(2.4rem - 2px),
-      rgba(148, 163, 184, 0.28) calc(2.4rem - 2px),
-      rgba(148, 163, 184, 0.28) 2.4rem
+      rgba(186, 230, 253, 0.35) calc(2.4rem - 2px),
+      rgba(186, 230, 253, 0.35) 2.4rem
     );
   background-position: 0 1.15rem, 0 1.15rem;
 }
