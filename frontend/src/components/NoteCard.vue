@@ -156,10 +156,10 @@ const openAuthorSpace = (e: Event) => {
       </div>
 
       <div class="px-5 pb-4">
-        <h3 v-if="note.title && note.title !== '无题'" class="mb-2 text-lg font-semibold leading-7 text-slate-900">
+        <h3 v-if="note.title && note.title !== '无题'" class="font-display mb-2 text-lg font-normal leading-7 text-slate-900">
           {{ note.title }}
         </h3>
-        <p v-if="previewText" class="mb-4 whitespace-pre-wrap text-[15px] leading-7 text-slate-700">
+        <p v-if="previewText" class="mb-4 whitespace-pre-wrap font-serif text-[15px] leading-7 text-slate-700">
           {{ previewText }}
         </p>
 
@@ -223,8 +223,8 @@ const openAuthorSpace = (e: Event) => {
         </div>
         
         <div class="relative z-10">
-          <h3 v-if="note.title && note.title !== '无题'" class="text-xl font-bold text-gray-800 mb-2 font-handwriting">{{ note.title }}</h3>
-          <p class="text-gray-600 text-base leading-7 font-handwriting line-clamp-6 whitespace-pre-wrap">{{ previewText }}</p>
+          <h3 v-if="note.title && note.title !== '无题'" class="font-display mb-2 text-xl font-normal text-gray-800">{{ note.title }}</h3>
+          <p class="line-clamp-6 whitespace-pre-wrap font-serif text-base leading-7 text-gray-600">{{ previewText }}</p>
         </div>
         <div class="relative z-10 mt-4 text-right text-xs text-gray-400 font-mono">{{ new Date(note.createdAt).toLocaleDateString() }}</div>
       </div>
@@ -235,8 +235,8 @@ const openAuthorSpace = (e: Event) => {
           <img :src="allImages[0]" class="w-full h-full object-cover filter contrast-[1.05] hover:scale-105 transition-transform duration-700" loading="lazy" @contextmenu.prevent @dragstart.prevent />
         </div>
         <div class="px-2 pt-1">
-          <h3 v-if="note.title && note.title !== '无题'" class="text-lg font-bold text-gray-800 mb-1 font-handwriting">{{ note.title }}</h3>
-          <p v-if="previewText" class="text-gray-500 text-sm leading-relaxed line-clamp-2 font-handwriting">{{ previewText }}</p>
+          <h3 v-if="note.title && note.title !== '无题'" class="font-display mb-1 text-lg font-normal text-gray-800">{{ note.title }}</h3>
+          <p v-if="previewText" class="line-clamp-2 font-serif text-sm leading-relaxed text-gray-500">{{ previewText }}</p>
           <div class="mt-2 text-right text-xs text-gray-300 font-mono">{{ new Date(note.createdAt).toLocaleDateString() }}</div>
         </div>
       </div>
@@ -251,7 +251,7 @@ const openAuthorSpace = (e: Event) => {
           </div>
         </div>
         <div class="px-2 pt-1">
-           <h3 v-if="note.title && note.title !== '无题'" class="text-lg font-bold text-gray-800 mb-1 font-handwriting">{{ note.title }}</h3>
+           <h3 v-if="note.title && note.title !== '无题'" class="font-display mb-1 text-lg font-normal text-gray-800">{{ note.title }}</h3>
            <div class="text-right text-xs text-gray-300 font-mono">{{ new Date(note.createdAt).toLocaleDateString() }}</div>
         </div>
       </div>
@@ -268,9 +268,3 @@ const openAuthorSpace = (e: Event) => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.font-handwriting {
-  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Merriweather', serif;
-}
-</style>

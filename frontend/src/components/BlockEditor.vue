@@ -147,7 +147,7 @@ const heartTemplateHint = computed(() => {
 </script>
 
 <template>
-  <div class="relative group transition-all mb-2">
+  <div class="relative group mb-1 transition-all">
     <button 
       @click="$emit('remove', block.id)"
       class="absolute -right-10 top-0 p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors opacity-0 group-hover:opacity-100 z-50"
@@ -161,7 +161,7 @@ const heartTemplateHint = computed(() => {
       <div
         contenteditable="true"
         @input="updateContent(($event.target as HTMLDivElement).innerText)"
-        class="editor-text-field w-full outline-none font-serif text-lg text-gray-700 empty:before:content-[attr(placeholder)] empty:before:text-gray-300 min-h-[2.4rem] whitespace-pre-wrap transition-colors"
+        class="editor-text-field min-h-[max(14rem,calc(100dvh-13.25rem))] w-full whitespace-pre-wrap font-serif text-base leading-[1.85rem] text-gray-700 outline-none transition-colors empty:before:text-gray-300 empty:before:content-[attr(placeholder)] sm:text-lg"
         placeholder="写下这一刻的想法..."
         ref="textOnlyEditor"
       ></div>

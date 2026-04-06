@@ -24,6 +24,7 @@ class NoteDetailPublic(BaseModel):
     title: str | None = None
     summary: str | None = None
     mood: str | None = None
+    weather_wmo_code: int | None = None
     scene: str | None = None
     book_theme: str | None = None
     is_private: bool

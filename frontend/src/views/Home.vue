@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChevronDown, Compass, Flame, LogOut, Plus, Settings, Sparkles } from 'lucide-vue-next'
+import { ChevronDown, Compass, Flame, LogOut, Plus, Search, Settings, Sparkles } from 'lucide-vue-next'
 import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
+import { noteMatchesQuery } from '../utils/noteSearch'
 
 const router = useRouter()
 const notesStore = useNotesStore()
@@ -12,7 +13,17 @@ const authStore = useAuthStore()
 
 const notes = computed(() => notesStore.publicNotes)
 const trendingNotes = computed(() => notesStore.hotNotes.slice(0, 8))
-const featuredNote = computed(() => notes.value[0])
+const searchQuery = ref('')
+const filteredNotes = computed(() => {
+  const q = searchQuery.value
+  if (!q.trim()) return notes.value
+  return notes.value.filter((n) => noteMatchesQuery(n, q))
+})
+const featuredNote = computed(() => {
+  const q = searchQuery.value.trim()
+  const list = q ? filteredNotes.value : notes.value
+  return list[0]
+})
 const profileMenuOpen = ref(false)
 
 const defaultHeroBgUrl = `${import.meta.env.BASE_URL}home-hero-default.svg`
@@ -245,14 +256,37 @@ onBeforeUnmount(() => {
 
       <main class="space-y-4">
         <div class="rounded-3xl border border-white/60 bg-white/82 px-5 py-4 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">
-          <div class="flex items-center gap-3">
-            <button class="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white">全部</button>
-            <button @click="goDynamic" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">关注动态</button>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex shrink-0 items-center gap-3">
+              <button class="rounded-full bg-sky-500 px-4 py-2 text-sm font-semibold text-white">全部</button>
+              <button @click="goDynamic" class="rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600">关注动态</button>
+            </div>
+            <div class="relative min-w-0 flex-1 sm:max-w-md">
+              <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" :size="16" />
+              <input
+                v-model="searchQuery"
+                type="search"
+                enterkeyhint="search"
+                placeholder="搜索标题、正文、作者…"
+                class="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-4 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm outline-none ring-sky-400/0 transition-[box-shadow,border-color] focus:border-sky-300 focus:ring-2 focus:ring-sky-400/30"
+              />
+            </div>
           </div>
         </div>
 
-        <div v-if="notes.length > 0" class="space-y-4">
-          <NoteCard v-for="note in notes" :key="note.id" :note="note" variant="feed" />
+        <div v-if="filteredNotes.length > 0" class="space-y-4">
+          <NoteCard v-for="note in filteredNotes" :key="note.id" :note="note" variant="feed" />
+        </div>
+
+        <div
+          v-else-if="notes.length > 0 && searchQuery.trim()"
+          class="rounded-3xl border border-white/60 bg-white/82 px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur"
+        >
+          <div class="mb-6 mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-sky-50 text-sky-400">
+            <Search :size="40" stroke-width="2" />
+          </div>
+          <p class="mb-2 text-xl font-bold text-gray-800">没有匹配的动态</p>
+          <p class="text-sm text-gray-500">换个关键词试试</p>
         </div>
 
         <div v-else class="rounded-3xl border border-white/60 bg-white/82 px-8 py-24 text-center text-gray-400 shadow-[0_18px_40px_rgba(74,144,164,0.08)] backdrop-blur">

@@ -7,6 +7,7 @@ class NoteCreate(BaseModel):
     title: str | None = None
     summary: str | None = None
     mood: str | None = None
+    weather_wmo_code: int | None = None
     scene: str | None = None
     book_theme: str | None = "default"
     is_private: bool = True
@@ -15,7 +16,6 @@ class NoteCreate(BaseModel):
 class NoteUpdate(BaseModel):
     title: str | None = None
     summary: str | None = None
-    mood: str | None = None
     scene: str | None = None
     book_theme: str | None = None
     is_private: bool | None = None
@@ -28,6 +28,7 @@ class NotePublic(BaseModel):
     title: str | None = None
     summary: str | None = None
     mood: str | None = None
+    weather_wmo_code: int | None = None
     scene: str | None = None
     book_theme: str | None = None
     is_private: bool

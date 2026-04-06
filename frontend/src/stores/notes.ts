@@ -42,6 +42,10 @@ export interface Note {
   } | null;
   title: string;
   summary?: string;
+  /** 心情 key：happy | love | calm | sad | excited | meh */
+  mood?: string | null;
+  /** Open-Meteo WMO weathercode，创建时快照 */
+  weatherWmoCode?: number | null;
   createdAt: number;
   status?: string;
   isPrivate?: boolean;
@@ -70,6 +74,8 @@ export const useNotesStore = defineStore('notes', {
         hotComment: n.hot_comment || null,
         title: n.title,
         summary: n.summary,
+        mood: n.mood ?? null,
+        weatherWmoCode: n.weather_wmo_code ?? null,
         createdAt: new Date(n.created_at).getTime(),
         theme: n.book_theme || 'book-classic',
         status: n.status,
@@ -167,6 +173,9 @@ export const useNotesStore = defineStore('notes', {
           commentCount: data.comment_count || 0,
           hotComment: data.hot_comment || null,
           title: data.title,
+          summary: data.summary,
+          mood: data.mood ?? null,
+          weatherWmoCode: data.weather_wmo_code ?? null,
           createdAt: new Date(data.created_at).getTime(),
           theme: data.book_theme || 'book-classic',
           status: data.status,
@@ -269,6 +278,8 @@ export const useNotesStore = defineStore('notes', {
           summary: summary,
           book_theme: note.theme,
           is_private: true,
+          mood: note.mood ?? 'calm',
+          weather_wmo_code: note.weatherWmoCode ?? null,
         });
         const newNoteId = noteRes.data.data.id;
 

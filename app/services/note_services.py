@@ -21,6 +21,7 @@ def create_note(session: Session, current_user: User, data: NoteCreate):
         title=data.title,
         summary=data.summary,
         mood=data.mood,
+        weather_wmo_code=data.weather_wmo_code,
         scene=data.scene,
         book_theme=data.book_theme or "default",
         is_private=data.is_private,
@@ -133,6 +134,8 @@ def _build_note_list_response(
             "author_avatar_url": author.avatar_url if author else None,
             "title": note.title,
             "summary": note.summary,
+            "mood": note.mood,
+            "weather_wmo_code": note.weather_wmo_code,
             "created_at": note.created_at,
             "book_theme": note.book_theme,
             "status": note.status,
@@ -475,6 +478,9 @@ def update_note(session: Session, current_user: User, note_id: int, data: NoteUp
     note = get_note(session, current_user, note_id)
 
     update_data = data.model_dump(exclude_unset=True)
+    # 心情与天气仅在创建时写入，保存后不可改
+    update_data.pop("mood", None)
+    update_data.pop("weather_wmo_code", None)
     for key, value in update_data.items():
         setattr(note, key, value)
 
@@ -593,6 +599,7 @@ def get_note_detail(session: Session, current_user: User | None, note_id: int):
         "title": note.title,
         "summary": note.summary,
         "mood": note.mood,
+        "weather_wmo_code": note.weather_wmo_code,
         "scene": note.scene,
         "book_theme": note.book_theme,
         "is_private": note.is_private,

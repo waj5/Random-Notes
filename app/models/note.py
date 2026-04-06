@@ -21,6 +21,7 @@ class Note(SQLModel, table=True):
     cover_media_id: Optional[int] = Field(default=None, foreign_key="media_assets.id")
     status: NoteStatus = Field(default=NoteStatus.draft)
     mood: Optional[str] = Field(default=None, max_length=30)
+    weather_wmo_code: Optional[int] = Field(default=None)
     scene: Optional[str] = Field(default=None, max_length=100)
     book_theme: Optional[str] = Field(default="default", max_length=30)
     is_private: bool = Field(default=True)

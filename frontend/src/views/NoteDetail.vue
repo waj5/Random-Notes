@@ -9,6 +9,7 @@ import { ArrowLeft, Download, Edit, ImageUp, Share2, Sparkles, Trash2 } from 'lu
 import QRCode from 'qrcode'
 import BlockViewer from '../components/BlockViewer.vue'
 import PetalBackground from '../components/PetalBackground.vue'
+import MoodWeatherIcons from '../components/MoodWeatherIcons.vue'
 
 interface NoteComment {
   id: number
@@ -533,12 +534,20 @@ const deleteComment = async (commentId: number) => {
        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </main>
 
-    <main v-else-if="note" class="relative z-10 mx-auto my-6 min-h-[calc(100vh-8rem)] max-w-4xl space-y-8 px-8 py-12">
+    <main v-else-if="note" class="relative z-10 mx-auto my-6 min-h-[calc(100vh-8rem)] max-w-2xl space-y-8 px-4 py-10 sm:px-6">
       <section class="notebook-page rounded-3xl border border-sky-100 bg-white/92 shadow-[0_14px_36px_rgba(54,120,160,0.08)] backdrop-blur">
-        <div class="text-center space-y-4 pb-10 pt-6">
-          <h1 class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight leading-tight">{{ note.title }}</h1>
-          <div class="text-sm font-medium tracking-wide text-slate-500">
-            {{ new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) }}
+        <div class="flex flex-col gap-4 border-b border-slate-100/90 pb-8 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+          <div class="min-w-0 flex-1 space-y-3 text-center sm:text-left">
+            <h1 class="font-display text-2xl font-normal leading-tight tracking-wide text-gray-800 sm:text-3xl md:text-[2.25rem]">{{ note.title }}</h1>
+            <div class="text-sm font-medium tracking-wide text-slate-500">
+              {{ new Date(note.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }) }}
+            </div>
+          </div>
+          <div
+            v-if="note.mood != null || note.weatherWmoCode != null"
+            class="flex shrink-0 justify-center sm:justify-end sm:pt-1"
+          >
+            <MoodWeatherIcons :mood-key="note.mood" :weather-wmo-code="note.weatherWmoCode" :size="26" />
           </div>
         </div>
 
@@ -810,7 +819,7 @@ const deleteComment = async (commentId: number) => {
 
 <style scoped>
 .notebook-page {
-  padding: 2.3rem 2.8rem 2.8rem 4.6rem;
+  padding: 2rem 1.75rem 2.5rem 3.25rem;
   background-color: rgba(255, 255, 255, 0.97);
   background-image:
     linear-gradient(
