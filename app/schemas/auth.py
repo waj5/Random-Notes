@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class UserRegister(BaseModel):
@@ -44,6 +44,7 @@ class UserPublic(BaseModel):
     email: str | None = None
     avatar_url: str | None = None
     profile_background_url: str | None = None
+    bio: str | None = None
 
 
 class UserProfileUpdate(BaseModel):
@@ -52,6 +53,7 @@ class UserProfileUpdate(BaseModel):
     email: str | None = None
     avatar_url: str | None = None
     profile_background_url: str | None = None
+    bio: str | None = Field(default=None, max_length=200)
     current_password: str | None = None
     new_password: str | None = None
 

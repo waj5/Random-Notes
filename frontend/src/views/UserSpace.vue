@@ -14,6 +14,7 @@ interface UserProfile {
   nickname: string
   avatar_url?: string
   profile_background_url?: string
+  bio?: string
   published_count: number
   image_count: number
   follower_count: number
@@ -202,7 +203,10 @@ watch(() => route.query.tab, () => {
               </div>
               <div class="pb-2">
                 <h1 class="text-3xl font-bold text-slate-900">{{ profile.nickname || profile.username }}</h1>
-                <p class="mt-2 text-sm text-slate-500">这里只展示对方已经发布的公开内容。</p>
+                <p class="mt-2 text-sm text-slate-500">
+                  <template v-if="profile.bio?.trim()">{{ profile.bio.trim() }}</template>
+                  <template v-else>这里只展示对方已经发布的公开内容。</template>
+                </p>
               </div>
             </div>
 

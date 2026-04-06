@@ -6,8 +6,10 @@ import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
 import { noteMatchesQuery } from '../utils/noteSearch'
+import { useHeroProfile } from '../composables/useHeroProfile'
 
 const router = useRouter()
+const { heroTitle, heroBioLine } = useHeroProfile()
 const notesStore = useNotesStore()
 const authStore = useAuthStore()
 
@@ -130,8 +132,11 @@ onBeforeUnmount(() => {
                 {{ (authStore.user?.nickname || authStore.user?.username || '我').slice(0, 1) }}
               </div>
               <div class="pb-2">
-                <h1 class="text-3xl font-bold text-slate-900">关注动态</h1>
-                <p class="mt-2 text-sm text-slate-500">这里只看你关注的人发布的公开内容，像专属时间线一样刷新。</p>
+                <h1 class="text-3xl font-bold text-slate-900">{{ heroTitle }}</h1>
+                <p class="mt-2 text-sm text-slate-500">
+                  <template v-if="heroBioLine">{{ heroBioLine }}</template>
+                  <template v-else>这里只看你关注的人发布的公开内容，像专属时间线一样刷新。</template>
+                </p>
               </div>
             </div>
 

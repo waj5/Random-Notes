@@ -9,6 +9,7 @@ interface User {
   email?: string;
   avatar_url?: string;
   profile_background_url?: string;
+  bio?: string;
 }
 
 interface AuthState {
@@ -100,6 +101,7 @@ export const useAuthStore = defineStore('auth', {
       email?: string;
       avatar_url?: string;
       profile_background_url?: string;
+      bio?: string;
       current_password?: string;
       new_password?: string;
     }) {

@@ -6,8 +6,10 @@ import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
 import { noteMatchesQuery } from '../utils/noteSearch'
+import { useHeroProfile } from '../composables/useHeroProfile'
 
 const router = useRouter()
+const { heroTitle, heroBioLine } = useHeroProfile()
 const notesStore = useNotesStore()
 const authStore = useAuthStore()
 
@@ -27,13 +29,6 @@ const featuredNote = computed(() => {
 const profileMenuOpen = ref(false)
 
 const defaultHeroBgUrl = `${import.meta.env.BASE_URL}home-hero-default.svg`
-
-const heroTitle = computed(() => {
-  if (authStore.isAuthenticated && authStore.user) {
-    return authStore.user.nickname?.trim() || authStore.user.username || '我'
-  }
-  return '随心广场'
-})
 
 const headerBackgroundStyle = computed(() => {
   const base = {
@@ -188,11 +183,11 @@ onBeforeUnmount(() => {
               <div class="pb-2">
                 <h1 class="text-3xl font-bold text-slate-900">{{ heroTitle }}</h1>
                 <p class="mt-2 text-sm text-slate-500">
-                  {{
-                    authStore.isAuthenticated
-                      ? '全站公开动态信息流。关注作者后，在「动态」页查看仅关注内容。'
-                      : '浏览全站公开动态；登录后可关注作者、点赞评论与发布。'
-                  }}
+                  <template v-if="heroBioLine">{{ heroBioLine }}</template>
+                  <template v-else-if="authStore.isAuthenticated">
+                    全站公开动态信息流。关注作者后，在「动态」页查看仅关注内容。
+                  </template>
+                  <template v-else>浏览全站公开动态；登录后可关注作者、点赞评论与发布。</template>
                 </p>
               </div>
             </div>

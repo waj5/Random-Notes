@@ -301,6 +301,9 @@ def update_current_user(session: Session, current_user: User, data: UserProfileU
     if data.profile_background_url is not None:
         current_user.profile_background_url = data.profile_background_url.strip() or None
 
+    if data.bio is not None:
+        current_user.bio = data.bio.strip() or None
+
     if data.new_password:
         if not data.current_password:
             raise HTTPException(status_code=400, detail="Current password is required")
@@ -354,6 +357,7 @@ def get_user_public_profile(session: Session, user_id: int, current_user: User |
         "nickname": user.nickname,
         "avatar_url": user.avatar_url,
         "profile_background_url": user.profile_background_url,
+        "bio": user.bio,
         "published_count": len(published_notes),
         "image_count": image_count,
         "follower_count": follower_count,

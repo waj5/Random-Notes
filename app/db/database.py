@@ -19,6 +19,8 @@ def create_db_and_tables():
             connection.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(20)"))
         if "profile_background_url" not in user_columns:
             connection.execute(text("ALTER TABLE users ADD COLUMN profile_background_url VARCHAR(500)"))
+        if "bio" not in user_columns:
+            connection.execute(text("ALTER TABLE users ADD COLUMN bio VARCHAR(200)"))
         if "cover_media_id" not in note_share_columns:
             connection.execute(text("ALTER TABLE note_shares ADD COLUMN cover_media_id INTEGER"))
         if "parent_id" not in note_comment_columns:

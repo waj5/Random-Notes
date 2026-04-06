@@ -22,6 +22,7 @@ class User(SQLModel, table=True):
     password_hash: str = Field(max_length=255)
     avatar_url: Optional[str] = Field(default=None, max_length=255)
     profile_background_url: Optional[str] = Field(default=None, max_length=500)
+    bio: Optional[str] = Field(default=None, max_length=200)
     status: UserStatus = Field(default=UserStatus.active)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

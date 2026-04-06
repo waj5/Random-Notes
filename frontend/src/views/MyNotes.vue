@@ -7,6 +7,7 @@ import { useNotesStore } from '../stores/notes'
 import { useAuthStore } from '../stores/auth'
 import NoteCard from '../components/NoteCard.vue'
 import PetalBackground from '../components/PetalBackground.vue'
+import { useHeroProfile } from '../composables/useHeroProfile'
 
 type MyTab = 'posts' | 'activity' | 'albums' | 'shares'
 type MyFilter = 'all' | 'published' | 'draft'
@@ -29,6 +30,7 @@ const route = useRoute()
 const router = useRouter()
 const notesStore = useNotesStore()
 const authStore = useAuthStore()
+const { heroTitle, heroBioLine } = useHeroProfile()
 
 const notes = computed(() => notesStore.myNotes)
 const user = computed(() => authStore.user)
@@ -45,6 +47,7 @@ const profileForm = ref({
   email: '',
   avatar_url: '',
   profile_background_url: '',
+  bio: '',
   current_password: '',
   new_password: '',
 })
@@ -168,6 +171,7 @@ const openProfile = () => {
     email: user.value?.email || '',
     avatar_url: user.value?.avatar_url || '',
     profile_background_url: user.value?.profile_background_url || '',
+    bio: user.value?.bio || '',
     current_password: '',
     new_password: '',
   }
@@ -293,8 +297,11 @@ watch(() => route.query, () => {
                 {{ (user?.nickname || user?.username || '我').slice(0, 1) }}
               </div>
               <div class="pb-1">
-                <h1 class="text-3xl font-bold text-slate-900">{{ user?.nickname || user?.username || '我的空间' }}</h1>
-                <p class="mt-1.5 text-sm text-slate-500">这里只展示你自己的内容，草稿和已发布都会保留在这里。</p>
+                <h1 class="text-3xl font-bold text-slate-900">{{ heroTitle }}</h1>
+                <p class="mt-1.5 text-sm text-slate-500">
+                  <template v-if="heroBioLine">{{ heroBioLine }}</template>
+                  <template v-else>这里只展示你自己的内容，草稿和已发布都会保留在这里。</template>
+                </p>
               </div>
             </div>
 
@@ -543,6 +550,10 @@ watch(() => route.query, () => {
                 <span>昵称</span>
                 <span class="font-medium text-slate-800">{{ user?.nickname || '-' }}</span>
               </div>
+              <div class="flex items-start justify-between gap-3">
+                <span class="shrink-0">个性签名</span>
+                <span class="text-right font-medium text-slate-800">{{ user?.bio?.trim() || '-' }}</span>
+              </div>
               <div class="flex items-center justify-between">
                 <span>用户名</span>
                 <span class="font-medium text-slate-800">{{ user?.username || '-' }}</span>
@@ -584,6 +595,13 @@ watch(() => route.query, () => {
             <input v-model="profileForm.email" type="email" placeholder="邮箱" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
             <input v-model="profileForm.avatar_url" type="text" placeholder="头像链接" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
             <input v-model="profileForm.profile_background_url" type="text" placeholder="顶部背景链接" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
+            <textarea
+              v-model="profileForm.bio"
+              rows="2"
+              maxlength="200"
+              placeholder="个性签名（首页、动态、我的等顶部展示）"
+              class="resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2"
+            />
             <input v-model="profileForm.current_password" type="password" placeholder="当前密码（修改密码时必填）" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
             <input v-model="profileForm.new_password" type="password" placeholder="新密码" class="rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-sky-400 sm:col-span-2" />
           </div>
