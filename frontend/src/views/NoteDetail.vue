@@ -506,7 +506,7 @@ const deleteComment = async (commentId: number) => {
     <PetalBackground />
     <!-- Navbar（与首页顶栏一致） -->
     <header class="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl transition-all duration-300">
-      <div class="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="mx-auto flex w-full max-w-[min(100%,56rem)] items-center justify-between px-2 py-4 sm:px-4 lg:max-w-[60rem]">
         <button @click="router.back()" class="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors group">
           <ArrowLeft :size="20" class="group-hover:-translate-x-1 transition-transform" />
         </button>
@@ -530,11 +530,11 @@ const deleteComment = async (commentId: number) => {
       </div>
     </header>
 
-    <main v-if="loading" class="relative z-10 mx-auto flex max-w-3xl justify-center px-6 py-12">
+    <main v-if="loading" class="relative z-10 mx-auto flex w-full max-w-[min(100%,56rem)] justify-center px-2 py-12 sm:px-4 lg:max-w-[60rem]">
        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </main>
 
-    <main v-else-if="note" class="relative z-10 mx-auto my-6 min-h-[calc(100vh-8rem)] max-w-2xl space-y-8 px-4 py-10 sm:px-6">
+    <main v-else-if="note" class="relative z-10 mx-auto my-4 min-h-[calc(100vh-8rem)] w-full max-w-[min(100%,56rem)] space-y-8 px-2 py-6 sm:my-6 sm:px-4 lg:max-w-[60rem]">
       <section class="notebook-page rounded-3xl border border-sky-100 bg-white/92 shadow-[0_14px_36px_rgba(54,120,160,0.08)] backdrop-blur">
         <div class="flex flex-col gap-4 border-b border-slate-100/90 pb-8 pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div class="min-w-0 flex-1 space-y-3 text-center sm:text-left">
