@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useNotesStore } from '../stores/notes'
 import type { Note, NoteBlock, LayoutType } from '../stores/notes'
@@ -54,6 +54,18 @@ onMounted(async () => {
       weatherLoading.value = false
     })
   }
+  await nextTick()
+  editorBootstrapped.value = true
+})
+
+onBeforeUnmount(() => {
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer)
+    autoSaveTimer = null
+  }
+  if (editorBootstrapped.value && draftHasContent()) {
+    void persistNote()
+  }
 })
 
 const addBlock = (type: LayoutType) => {
@@ -78,6 +90,80 @@ const removeBlock = (id: string) => {
 }
 
 const isSaving = ref(false)
+const autoSaveHint = ref('')
+const AUTO_SAVE_MS = 2000
+let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
+const editorBootstrapped = ref(false)
+
+function draftHasContent(): boolean {
+  if (title.value.trim()) return true
+  return blocks.value.some(
+    (b) =>
+      (b.content?.trim()?.length ?? 0) > 0 ||
+      (b.images?.length ?? 0) > 0
+  )
+}
+
+let saveInFlight = false
+
+async function persistNote(quietError = true) {
+  if (saveInFlight) return
+  if (!title.value.trim() && blocks.value.length === 0) return
+
+  saveInFlight = true
+  isSaving.value = true
+  autoSaveHint.value = ''
+  try {
+    const existingNote = isEditing.value ? await notesStore.getNoteById(noteId.value) : undefined
+    const note: Note = {
+      id: isEditing.value ? noteId.value : Date.now().toString(),
+      title: title.value || '无题',
+      createdAt: existingNote?.createdAt || Date.now(),
+      blocks: blocks.value,
+      theme: 'book-classic',
+      ...(isEditing.value
+        ? {}
+        : {
+            mood: selectedMood.value,
+            weatherWmoCode: weatherWmoCode.value,
+          }),
+    }
+
+    if (isEditing.value) {
+      await notesStore.updateNote(note.id, note)
+    } else {
+      const newId = await notesStore.addNote(note)
+      noteId.value = newId
+      isEditing.value = true
+      router.replace({ name: 'edit', params: { id: newId } })
+    }
+
+    const t = new Date()
+    autoSaveHint.value = `已保存 ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`
+  } catch (error) {
+    console.error('Failed to save note:', error)
+    if (quietError) {
+      autoSaveHint.value = '保存失败'
+    } else {
+      alert('保存失败，请重试')
+    }
+  } finally {
+    saveInFlight = false
+    isSaving.value = false
+  }
+}
+
+function scheduleAutoSave() {
+  if (!editorBootstrapped.value) return
+  if (!draftHasContent()) return
+  if (autoSaveTimer) clearTimeout(autoSaveTimer)
+  autoSaveTimer = setTimeout(() => {
+    autoSaveTimer = null
+    void persistNote()
+  }, AUTO_SAVE_MS)
+}
+
+watch([title, blocks], scheduleAutoSave, { deep: true })
 
 const isPublishing = ref(false)
 
@@ -127,38 +213,7 @@ const publishNote = async () => {
 }
 
 const saveNote = async () => {
-  if (!title.value.trim() && blocks.value.length === 0) return
-  
-  isSaving.value = true
-  try {
-    const existingNote = isEditing.value ? await notesStore.getNoteById(noteId.value) : undefined
-    const note: Note = {
-      id: isEditing.value ? noteId.value : Date.now().toString(),
-      title: title.value || '无题',
-      createdAt: existingNote?.createdAt || Date.now(),
-      blocks: blocks.value,
-      theme: 'book-classic',
-      ...(isEditing.value
-        ? {}
-        : {
-            mood: selectedMood.value,
-            weatherWmoCode: weatherWmoCode.value,
-          }),
-    }
-
-    if (isEditing.value) {
-      await notesStore.updateNote(note.id, note)
-    } else {
-      await notesStore.addNote(note)
-    }
-    
-    router.push('/mine')
-  } catch (error) {
-    console.error('Failed to save note:', error)
-    alert('保存失败，请重试')
-  } finally {
-    isSaving.value = false
-  }
+  await persistNote(false)
 }
 </script>
 
@@ -174,6 +229,7 @@ const saveNote = async () => {
         <h1 class="text-xl font-bold text-gray-800 tracking-tight">{{ isEditing ? '编辑随想' : '新建随想' }}</h1>
       </div>
       <div class="flex items-center gap-3">
+        <span v-if="autoSaveHint" class="hidden text-xs text-slate-500 sm:inline">{{ autoSaveHint }}</span>
         <button 
           v-if="isEditing"
           @click="publishNote"
