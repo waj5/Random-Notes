@@ -2,19 +2,19 @@
 set -euo pipefail
 
 SQL_FILE="${1:-/tmp/poetize.sql}"
-NEW_PASSWORD="${2:-}"
+TARGET_USERNAME="${2:-user_6008_60b0f7}"
 API_CONTAINER="${API_CONTAINER:-deploy-api-1}"
 MYSQL_CONTAINER="${MYSQL_CONTAINER:-poetize-mysql-import}"
 MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-tmp_poetize_import}"
 REPO_DIR="${REPO_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 
 usage() {
-  echo "用法: $0 [poetize.sql路径] <登录密码>"
-  echo "示例: $0 /tmp/poetize.sql 'MyPass123!'"
+  echo "用法: $0 [poetize.sql路径] [目标用户名]"
+  echo "示例: $0 /tmp/poetize.sql user_6008_60b0f7"
   exit 1
 }
 
-[[ -n "$NEW_PASSWORD" ]] || usage
+[[ -n "$TARGET_USERNAME" ]] || usage
 [[ -f "$SQL_FILE" ]] || { echo "找不到 SQL 文件: $SQL_FILE"; exit 1; }
 [[ -f "$REPO_DIR/scripts/import_poetize.py" ]] || { echo "找不到 $REPO_DIR/scripts/import_poetize.py，请先 git pull"; exit 1; }
 docker inspect "$API_CONTAINER" >/dev/null 2>&1 || { echo "找不到容器 $API_CONTAINER"; exit 1; }
@@ -22,6 +22,7 @@ docker inspect "$API_CONTAINER" >/dev/null 2>&1 || { echo "找不到容器 $API_
 NETWORK="$(docker inspect "$API_CONTAINER" --format '{{range $k, $v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}' | head -n1)"
 [[ -n "$NETWORK" ]] || { echo "无法获取 Docker 网络"; exit 1; }
 
+echo "==> 目标用户: $TARGET_USERNAME"
 echo "==> 网络: $NETWORK"
 echo "==> 清理旧临时 MySQL"
 docker rm -f "$MYSQL_CONTAINER" >/dev/null 2>&1 || true
@@ -60,9 +61,7 @@ echo "==> 执行迁移"
 docker exec \
   -e POETIZE_MYSQL_URL="mysql+pymysql://root:${MYSQL_ROOT_PASSWORD}@${MYSQL_CONTAINER}:3306/poetize" \
   "$API_CONTAINER" \
-  python /app/scripts/import_poetize.py --default-password "$NEW_PASSWORD"
+  python /app/scripts/import_poetize.py --target-username "$TARGET_USERNAME"
 
 echo ""
-echo "导入完成。"
-echo "登录用户名: hck"
-echo "登录密码: $NEW_PASSWORD"
+echo "导入完成。请用 $TARGET_USERNAME 登录查看。"

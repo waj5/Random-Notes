@@ -249,6 +249,7 @@ def import_articles(
     mysql_url: str,
     user_map: dict[int, int],
     skip_existing_titles: bool,
+    target_user_id: int | None = None,
 ) -> None:
     rows = fetch_rows(
         mysql_url,
@@ -262,7 +263,7 @@ def import_articles(
     )
     media_cache: dict[str, int] = {}
     for row in rows:
-        user_id = user_map.get(row["user_id"])
+        user_id = target_user_id or user_map.get(row["user_id"])
         if not user_id:
             print(f"跳过文章 #{row['id']}：找不到用户 poetize#{row['user_id']}")
             continue
@@ -312,9 +313,22 @@ def import_articles(
 def main():
     parser = argparse.ArgumentParser(description="Poetize -> Random-Notes 数据迁移")
     parser.add_argument("--mysql-url", default=None, help="MySQL 连接，默认读 POETIZE_MYSQL_URL")
-    parser.add_argument("--default-password", required=True, help="迁移后登录密码（Poetize 为 MD5，无法沿用）")
+    parser.add_argument(
+        "--default-password",
+        default=None,
+        help="新建 Poetize 用户时的登录密码（Poetize 为 MD5，无法沿用）",
+    )
+    parser.add_argument(
+        "--target-username",
+        default=None,
+        help="全部文章导入到已有用户名下，不创建 Poetize 用户",
+    )
     parser.add_argument("--skip-existing-titles", action="store_true", help="同名笔记已存在则跳过")
     args = parser.parse_args()
+
+    if not args.target_username and not args.default_password:
+        print("请指定 --target-username 或 --default-password", file=sys.stderr)
+        sys.exit(1)
 
     mysql_url = args.mysql_url or __import__("os").getenv("POETIZE_MYSQL_URL")
     if not mysql_url:
@@ -332,10 +346,26 @@ def main():
 
     pg_engine = create_engine(DATABASE_URL)
     with Session(pg_engine) as session:
-        user_map = import_users(session, mysql_url, args.default_password)
-        import_articles(session, mysql_url, user_map, args.skip_existing_titles)
-
-    print("完成。请用迁移时设置的用户名 + --default-password 登录。")
+        if args.target_username:
+            target_user = session.exec(
+                select(User).where(User.username == args.target_username)
+            ).first()
+            if not target_user:
+                print(f"找不到用户: {args.target_username}", file=sys.stderr)
+                sys.exit(1)
+            print(f"全部文章导入到: {args.target_username} (id={target_user.id})")
+            import_articles(
+                session,
+                mysql_url,
+                {},
+                args.skip_existing_titles,
+                target_user_id=target_user.id,
+            )
+            print(f"完成。请用 {args.target_username} 登录查看。")
+        else:
+            user_map = import_users(session, mysql_url, args.default_password)
+            import_articles(session, mysql_url, user_map, args.skip_existing_titles)
+            print("完成。请用迁移时设置的用户名 + --default-password 登录。")
 
 
 if __name__ == "__main__":
