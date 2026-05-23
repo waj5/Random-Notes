@@ -45,6 +45,38 @@ from app.models.user import User, UserStatus  # noqa: E402
 
 MD_IMAGE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
 ALLOWED_EXT = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}
+DEFAULT_URL_REWRITES: list[tuple[str, str]] = [
+    ("http://get.fs-hck.top/articlePicture/", "http://cdn.fs-hck.top/articlePicture/"),
+    ("https://get.fs-hck.top/articlePicture/", "https://cdn.fs-hck.top/articlePicture/"),
+]
+
+
+def build_url_rewrites(extra: list[str] | None) -> list[tuple[str, str]]:
+    rewrites = list(DEFAULT_URL_REWRITES)
+    for item in extra or []:
+        if "=>" not in item:
+            raise ValueError(f"无效 URL 替换规则: {item}，格式为 old=>new")
+        old, new = item.split("=>", 1)
+        rewrites.append((old.strip(), new.strip()))
+    return rewrites
+
+
+def rewrite_url(url: str | None, rewrites: list[tuple[str, str]]) -> str | None:
+    if not url:
+        return url
+    result = url
+    for old, new in rewrites:
+        result = result.replace(old, new)
+    return result
+
+
+def rewrite_text(text: str | None, rewrites: list[tuple[str, str]]) -> str:
+    if not text:
+        return ""
+    result = text
+    for old, new in rewrites:
+        result = result.replace(old, new)
+    return result
 
 
 def fetch_rows(mysql_url: str, sql: str) -> list[dict]:
@@ -82,7 +114,14 @@ def download_image(url: str) -> tuple[bytes, str, str] | None:
         return None
 
 
-def save_media(session: Session, user_id: int, url: str, cache: dict[str, int]) -> int | None:
+def save_media(
+    session: Session,
+    user_id: int,
+    url: str,
+    cache: dict[str, int],
+    rewrites: list[tuple[str, str]],
+) -> int | None:
+    url = rewrite_url(url, rewrites) or url
     if url in cache:
         return cache[url]
     downloaded = download_image(url)
@@ -143,13 +182,14 @@ def create_blocks(
     content: str,
     cover_url: str | None,
     media_cache: dict[str, int],
+    rewrites: list[tuple[str, str]],
 ) -> int | None:
     parts = split_content(content)
     sort_order = 0
     cover_media_id = None
 
     if cover_url:
-        cover_media_id = save_media(session, user_id, cover_url, media_cache)
+        cover_media_id = save_media(session, user_id, cover_url, media_cache, rewrites)
 
     image_run: list[str] = []
 
@@ -158,7 +198,7 @@ def create_blocks(
         if not image_run:
             return
         if len(image_run) == 1:
-            media_id = save_media(session, user_id, image_run[0], media_cache)
+            media_id = save_media(session, user_id, image_run[0], media_cache, rewrites)
             if media_id:
                 block = NoteBlock(
                     note_id=note_id,
@@ -184,7 +224,7 @@ def create_blocks(
             session.add(block)
             session.flush()
             for idx, img_url in enumerate(image_run):
-                media_id = save_media(session, user_id, img_url, media_cache)
+                media_id = save_media(session, user_id, img_url, media_cache, rewrites)
                 if media_id:
                     session.add(
                         BlockMediaRelation(block_id=block.id, media_id=media_id, sort_order=idx)
@@ -244,13 +284,58 @@ def import_users(session: Session, mysql_url: str, default_password: str) -> dic
     return mapping
 
 
+def wipe_user_notes(session: Session, user_id: int) -> None:
+    from app.models.note_comment import NoteComment
+    from app.models.note_share import NoteShare
+
+    notes = session.exec(select(Note).where(Note.user_id == user_id)).all()
+    note_ids = [note.id for note in notes if note.id is not None]
+    if not note_ids:
+        print(f"用户 #{user_id} 无笔记，跳过清理")
+        return
+
+    comments = session.exec(select(NoteComment).where(NoteComment.note_id.in_(note_ids))).all()
+    for comment in comments:
+        session.delete(comment)
+
+    shares = session.exec(select(NoteShare).where(NoteShare.note_id.in_(note_ids))).all()
+    for share in shares:
+        session.delete(share)
+
+    blocks = session.exec(select(NoteBlock).where(NoteBlock.note_id.in_(note_ids))).all()
+    block_ids = [block.id for block in blocks if block.id is not None]
+    if block_ids:
+        relations = session.exec(
+            select(BlockMediaRelation).where(BlockMediaRelation.block_id.in_(block_ids))
+        ).all()
+        for relation in relations:
+            session.delete(relation)
+    for block in blocks:
+        session.delete(block)
+
+    for note in notes:
+        session.delete(note)
+
+    medias = session.exec(select(MediaAsset).where(MediaAsset.user_id == user_id)).all()
+    for media in medias:
+        file_path = IMAGE_UPLOAD_DIR.parent / media.file_key
+        if file_path.is_file():
+            file_path.unlink()
+        session.delete(media)
+
+    session.commit()
+    print(f"已清除用户 #{user_id}：{len(notes)} 篇笔记、{len(medias)} 个媒体")
+
+
 def import_articles(
     session: Session,
     mysql_url: str,
     user_map: dict[int, int],
     skip_existing_titles: bool,
     target_user_id: int | None = None,
+    rewrites: list[tuple[str, str]] | None = None,
 ) -> None:
+    url_rewrites = rewrites or DEFAULT_URL_REWRITES
     rows = fetch_rows(
         mysql_url,
         """
@@ -298,9 +383,10 @@ def import_articles(
             session,
             note.id,
             user_id,
-            row.get("article_content") or "",
-            row.get("article_cover"),
+            rewrite_text(row.get("article_content") or "", url_rewrites),
+            rewrite_url(row.get("article_cover"), url_rewrites),
             media_cache,
+            url_rewrites,
         )
         if cover_media_id:
             note.cover_media_id = cover_media_id
@@ -324,7 +410,25 @@ def main():
         help="全部文章导入到已有用户名下，不创建 Poetize 用户",
     )
     parser.add_argument("--skip-existing-titles", action="store_true", help="同名笔记已存在则跳过")
+    parser.add_argument(
+        "--replace-existing",
+        action="store_true",
+        help="导入前先删除目标用户的全部笔记与媒体（用于重新导入）",
+    )
+    parser.add_argument(
+        "--url-rewrite",
+        action="append",
+        default=[],
+        metavar="OLD=>NEW",
+        help="额外 URL 替换规则，可重复指定",
+    )
     args = parser.parse_args()
+
+    try:
+        url_rewrites = build_url_rewrites(args.url_rewrite)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
 
     if not args.target_username and not args.default_password:
         print("请指定 --target-username 或 --default-password", file=sys.stderr)
@@ -354,17 +458,26 @@ def main():
                 print(f"找不到用户: {args.target_username}", file=sys.stderr)
                 sys.exit(1)
             print(f"全部文章导入到: {args.target_username} (id={target_user.id})")
+            if args.replace_existing:
+                wipe_user_notes(session, target_user.id)
             import_articles(
                 session,
                 mysql_url,
                 {},
                 args.skip_existing_titles,
                 target_user_id=target_user.id,
+                rewrites=url_rewrites,
             )
             print(f"完成。请用 {args.target_username} 登录查看。")
         else:
             user_map = import_users(session, mysql_url, args.default_password)
-            import_articles(session, mysql_url, user_map, args.skip_existing_titles)
+            import_articles(
+                session,
+                mysql_url,
+                user_map,
+                args.skip_existing_titles,
+                rewrites=url_rewrites,
+            )
             print("完成。请用迁移时设置的用户名 + --default-password 登录。")
 
 
