@@ -294,13 +294,18 @@ def wipe_user_notes(session: Session, user_id: int) -> None:
         print(f"用户 #{user_id} 无笔记，跳过清理")
         return
 
+    medias = session.exec(select(MediaAsset).where(MediaAsset.user_id == user_id)).all()
+    media_paths = [IMAGE_UPLOAD_DIR.parent / media.file_key for media in medias]
+
     comments = session.exec(select(NoteComment).where(NoteComment.note_id.in_(note_ids))).all()
     for comment in comments:
         session.delete(comment)
+    session.flush()
 
     shares = session.exec(select(NoteShare).where(NoteShare.note_id.in_(note_ids))).all()
     for share in shares:
         session.delete(share)
+    session.flush()
 
     blocks = session.exec(select(NoteBlock).where(NoteBlock.note_id.in_(note_ids))).all()
     block_ids = [block.id for block in blocks if block.id is not None]
@@ -310,20 +315,29 @@ def wipe_user_notes(session: Session, user_id: int) -> None:
         ).all()
         for relation in relations:
             session.delete(relation)
+        session.flush()
+
     for block in blocks:
         session.delete(block)
+    session.flush()
+
+    for note in notes:
+        note.cover_media_id = None
+        session.add(note)
+    session.flush()
 
     for note in notes:
         session.delete(note)
+    session.flush()
 
-    medias = session.exec(select(MediaAsset).where(MediaAsset.user_id == user_id)).all()
     for media in medias:
-        file_path = IMAGE_UPLOAD_DIR.parent / media.file_key
-        if file_path.is_file():
-            file_path.unlink()
         session.delete(media)
-
     session.commit()
+
+    for path in media_paths:
+        if path.is_file():
+            path.unlink()
+
     print(f"已清除用户 #{user_id}：{len(notes)} 篇笔记、{len(medias)} 个媒体")
 
 
