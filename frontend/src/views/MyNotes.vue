@@ -230,7 +230,7 @@ watch(() => route.query, () => {
     <div class="sticky top-0 z-30 border-b border-white/60 bg-white/80 backdrop-blur-xl">
       <div class="mx-auto flex h-16 max-w-[1500px] items-center justify-between px-4 md:px-6">
         <div class="flex items-center gap-8">
-          <button class="text-2xl font-black tracking-tight text-sky-500">随心记</button>
+          <button class="text-xl font-black tracking-tight text-sky-500 sm:text-2xl">随心记</button>
           <nav class="hidden items-center gap-6 text-sm text-slate-600 md:flex">
             <button @click="router.push('/')" class="hover:text-sky-500">首页</button>
             <button @click="router.push('/dynamic')" class="hover:text-sky-500">动态</button>
@@ -238,10 +238,14 @@ watch(() => route.query, () => {
           </nav>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <RouterLink
+            :to="{ name: 'novels' }"
+            class="shrink-0 rounded-full border border-sky-200 bg-white px-3 py-2.5 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-50 sm:px-4"
+          >小说</RouterLink>
           <button
             @click="router.push('/create')"
-            class="flex items-center gap-2 rounded-full bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] transition-colors hover:bg-sky-600"
+            class="flex shrink-0 items-center gap-1 rounded-full bg-sky-500 px-2.5 py-2.5 text-xs font-semibold text-white shadow-[0_10px_24px_rgba(14,165,233,0.28)] transition-colors hover:bg-sky-600 sm:gap-2 sm:px-5 sm:text-sm"
           >
             <Plus :size="18" />
             <span>新建笔记</span>

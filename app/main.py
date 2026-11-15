@@ -12,6 +12,7 @@ from app.api.routes.media_assets import router as media_assets_router
 from app.api.routes.note_blocks import router as note_blocks_router
 from app.api.routes.note_comments import router as note_comments_router
 from app.api.routes.notes import router as notes_router
+from app.api.routes.novels import router as novels_router
 from app.api.routes.note_shares import router as note_shares_router
 from app.core.config import (
     APP_ENV,
@@ -66,6 +67,7 @@ register_exception_handlers(app)
 
 app.include_router(auth_router, prefix="/api")
 app.include_router(notes_router, prefix="/api")
+app.include_router(novels_router, prefix="/api")
 app.include_router(note_shares_router, prefix="/api")
 app.include_router(note_comments_router, prefix="/api")
 app.include_router(follows_router, prefix="/api")

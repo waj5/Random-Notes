@@ -41,6 +41,19 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/novels',
+      name: 'novels',
+      component: () => import('../views/Novels.vue'),
+      meta: { requiresAuth: true, offlineNovels: true }
+    },
+    {
+      path: '/novels/:id(\\d+)',
+      name: 'novel',
+      component: () => import('../views/NovelWorkspace.vue'),
+      props: route => ({ novelId: Number(route.params.id) }),
+      meta: { requiresAuth: true, offlineNovels: true }
+    },
+    {
       path: '/space/:userId',
       name: 'user-space',
       component: UserSpace,
@@ -71,7 +84,8 @@ router.beforeEach(async (to, _from, next) => {
   if (!authStore.initialized) {
     await authStore.initialize()
   }
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+  const canOpenOffline = to.meta.offlineNovels && !navigator.onLine && authStore.user
+  if (to.meta.requiresAuth && !authStore.isAuthenticated && !canOpenOffline) {
     window.alert('这个功能需要先登录')
     next('/login')
   } else {

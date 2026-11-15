@@ -1,6 +1,7 @@
 from app.models.user import User
 from app.models.user_session import UserSession
 from app.models.note import Note
+from app.models.novel import Novel, NovelChapter
 from app.models.note_comment import NoteComment
 from app.models.note_block import NoteBlock
 from app.models.media_asset import MediaAsset

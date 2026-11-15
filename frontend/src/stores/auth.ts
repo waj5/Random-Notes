@@ -32,6 +32,7 @@ export const useAuthStore = defineStore('auth', {
     async initialize() {
       if (this.initialized) return
       try {
+        if (!navigator.onLine) return
         await this.fetchUser()
         if (this.user) {
           this.isAuthenticated = true
@@ -91,7 +92,7 @@ export const useAuthStore = defineStore('auth', {
         }
       } catch (error) {
         console.error('Fetch user failed:', error);
-        this.clearAuthState();
+        if (navigator.onLine) this.clearAuthState();
         throw error;
       }
     },
