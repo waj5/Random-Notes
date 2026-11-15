@@ -95,7 +95,7 @@ function restorePosition(id: number) {
   try {
     const position = JSON.parse(localStorage.getItem(cursorKey(id)) ?? 'null')
     if (!position) return
-    field.restorePosition(position.start, position.end, position.direction)
+    field.restorePosition(position.start, position.end, position.direction, position.scroll)
   } catch {
     // Use the browser's default position when the snapshot is unavailable.
   }
